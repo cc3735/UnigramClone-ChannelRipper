@@ -1902,7 +1902,7 @@ namespace Telegram.Views.Popups
 
             var selection = ChatsPanel.SelectedItems
                 .OfType<Chat>()
-                .Where(x => ViewModel.ClientService.IsForum(x) ? ViewModel.SelectedTopics.ContainsKey(x.Id) : true);
+                .Where(x => !ViewModel.Options.CanPostMessages || !ViewModel.ClientService.IsForum(x) || ViewModel.SelectedTopics.ContainsKey(x.Id));
 
             ViewModel.SelectedItems = new MvxObservableCollection<Chat>(selection);
         }

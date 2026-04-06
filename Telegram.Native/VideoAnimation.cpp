@@ -827,13 +827,12 @@ namespace winrt::Telegram::Native::implementation
                 if (frame->data[3])
                 {
                     // Convert to ARGB first, then swap to BGRA
-                    libyuv::I420AlphaToARGBMatrix(
+                    libyuv::I420AlphaToARGB(
                         frame->data[0], frame->linesize[0],
                         frame->data[1], frame->linesize[1],
                         frame->data[2], frame->linesize[2],
                         frame->data[3], frame->linesize[3],
                         pixels, width * 4,
-                        &libyuv::kYvuI601Constants,
                         width, height, 1
                     );
                     // Convert ARGB to BGRA in-place

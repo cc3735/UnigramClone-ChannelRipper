@@ -401,7 +401,9 @@ namespace Telegram.Services
 
         static ClientService()
         {
+            StartupTrace.Write("ClientService.cctor begin");
             InitializeDiagnostics();
+            StartupTrace.Write("ClientService.cctor InitializeDiagnostics complete");
 
             _runThread = new Thread(Client.Run)
             {
@@ -409,18 +411,22 @@ namespace Telegram.Services
                 IsBackground = true
             };
             _runThread.Start();
+            StartupTrace.Write("ClientService.cctor run thread started");
         }
 
         public ClientService(ISession session, bool online, IDeviceInfoService deviceInfoService, ISettingsService settings, ILocaleService locale, IEventAggregator aggregator)
         {
+            StartupTrace.Write("ClientService.ctor begin");
             _session = session;
             _deviceInfoService = deviceInfoService;
             _settings = settings;
             _locale = locale;
             _options = new OptionsService(this);
             _aggregator = aggregator;
+            StartupTrace.Write("ClientService.ctor fields assigned");
 
             Initialize(online);
+            StartupTrace.Write("ClientService.ctor Initialize returned");
         }
 
         public void ViewMessages(long chatId, MessageTopic topicId, IList<long> messageIds, MessageSource source, bool forceRead)
@@ -460,7 +466,9 @@ namespace Telegram.Services
 
         private void Initialize(bool online = true)
         {
+            StartupTrace.Write($"ClientService.Initialize begin online={online}");
             _client = new Client(this);
+            StartupTrace.Write("ClientService.Initialize client created");
 
 #if MOCKUP
             ProfilePhoto ProfilePhoto(string name)
@@ -575,6 +583,7 @@ namespace Telegram.Services
 
             Task.Factory.StartNew(() =>
             {
+                StartupTrace.Write("ClientService.Initialize task begin");
                 var useMessageDatabase = true;
 
                 if (_settings.Diagnostics.DisableDatabase)
@@ -590,9 +599,11 @@ namespace Telegram.Services
                 }
 
                 InitializeDiagnostics();
+                StartupTrace.Write("ClientService.Initialize task InitializeDiagnostics complete");
                 InitializeFlush();
-
+                StartupTrace.Write("ClientService.Initialize task InitializeFlush complete");
                 _client.Send(new SetOption("ignore_background_updates", new OptionValueBoolean(_settings.Diagnostics.DisableDatabase)));
+                StartupTrace.Write("ClientService.Initialize task SetOption ignore_background_updates");
                 _client.Send(new SetOption("language_pack_database_path", new OptionValueString(System.IO.Path.Combine(ApplicationData.Current.LocalFolder.Path, "langpack"))));
                 _client.Send(new SetOption("localization_target", new OptionValueString(LocaleService.LANGPACK)));
                 _client.Send(new SetOption("language_pack_id", new OptionValueString(SettingsService.Current.LanguagePackId)));
@@ -616,8 +627,11 @@ namespace Telegram.Services
                     deviceModel: deviceModel,
                     systemVersion: _deviceInfoService.SystemVersion,
                     applicationVersion: _deviceInfoService.ApplicationVersion));
+                StartupTrace.Write("ClientService.Initialize task SetTdlibParameters sent");
                 Send(new GetApplicationConfig(), UpdateConfig);
+                StartupTrace.Write("ClientService.Initialize task GetApplicationConfig sent");
             });
+            StartupTrace.Write("ClientService.Initialize task queued");
         }
 
         private static void InitializeDiagnostics()

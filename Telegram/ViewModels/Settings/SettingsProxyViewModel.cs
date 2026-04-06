@@ -71,7 +71,7 @@ namespace Telegram.ViewModels.Settings
             //    proxyId = 0;
             //}
 
-            var status = await ClientService.SendAsync(new PingProxy(proxy.Proxy));
+            var status = await ClientService.SendAsync(new PingProxy(proxy.Id));
             BeginOnUIThread(() =>
             {
                 if (status is Seconds seconds)
@@ -335,7 +335,7 @@ namespace Telegram.ViewModels.Settings
         {
             SelectedItems.Clear();
 
-            var response = await ClientService.SendAsync(new GetInternalLink(new InternalLinkTypeProxy(proxy.Proxy), true));
+            var response = await ClientService.SendAsync(new GetInternalLink(new InternalLinkTypeProxy(proxy.Proxy.Server, proxy.Proxy.Port, proxy.Proxy.Type), true));
             if (response is HttpUrl httpUrl)
             {
                 await ShowPopupAsync(new ChooseChatsPopup(), new ChooseChatsConfigurationPostLink(httpUrl));
@@ -346,7 +346,7 @@ namespace Telegram.ViewModels.Settings
         {
             SelectedItems.Clear();
 
-            var response = await ClientService.SendAsync(new GetInternalLink(new InternalLinkTypeProxy(proxy.Proxy), true));
+            var response = await ClientService.SendAsync(new GetInternalLink(new InternalLinkTypeProxy(proxy.Proxy.Server, proxy.Proxy.Port, proxy.Proxy.Type), true));
             if (response is HttpUrl httpUrl)
             {
                 MessageHelper.CopyLink(XamlRoot, httpUrl.Url);
@@ -362,7 +362,7 @@ namespace Telegram.ViewModels.Settings
 
             foreach (var proxy in selected)
             {
-                var response = await ClientService.SendAsync(new GetInternalLink(new InternalLinkTypeProxy(proxy.Proxy), true));
+                var response = await ClientService.SendAsync(new GetInternalLink(new InternalLinkTypeProxy(proxy.Proxy.Server, proxy.Proxy.Port, proxy.Proxy.Type), true));
                 if (response is HttpUrl httpUrl)
                 {
                     builder.AppendLine(httpUrl.Url);

@@ -390,7 +390,7 @@ namespace Telegram.Views.Stars.Popups
         {
             var totalCount = 0u;
 
-            var response = await _clientService.SendAsync(new SearchGiftsForResale(_giftId, _order, _forCrafting, _attributes, _nextOffset, 24));
+            var response = await _clientService.SendAsync(new SearchGiftsForResale(_giftId, _order, _attributes, _nextOffset, 24));
             if (response is GiftsForResale gifts)
             {
                 foreach (var gift in gifts.Gifts)
@@ -627,7 +627,7 @@ namespace Telegram.Views.Stars.Popups
             {
                 Hide(ContentDialogResult.Primary);
 
-                var receivedGift = new ReceivedGift(gift.ReceivedGiftId, null, null, 0, false, false, false, false, false, false, 0, new SentGiftUpgraded(gift.Gift), Array.Empty<int>(), 0, 0, false, 0, 0, 0, 0, 0, string.Empty, 0);
+                var receivedGift = new ReceivedGift(gift.ReceivedGiftId, null, null, 0, false, false, false, false, false, false, 0, new SentGiftUpgraded(gift.Gift), Array.Empty<int>(), 0, 0, false, 0, 0, 0, 0, 0, string.Empty);
 
                 var confirm = await _navigationService.ShowPopupAsync(new ReceivedGiftPopup(_clientService, _navigationService, receivedGift, gift.Gift.OwnerId, _receiverId));
                 if (confirm == ContentDialogResult.Primary && _receiverId == null)

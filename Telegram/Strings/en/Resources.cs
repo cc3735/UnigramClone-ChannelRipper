@@ -24004,6 +24004,81 @@ namespace Telegram
         public static string WhoCanCallMeInfo => Resource.GetString("WhoCanCallMeInfo");
         
         /// <summary>
+        /// Localized resource similar to "Add channel target"
+        /// </summary>
+        public static string ChannelRipperAddTarget => Resource.GetString("ChannelRipperAddTarget");
+
+        /// <summary>
+        /// Localized resource similar to "Disabled"
+        /// </summary>
+        public static string ChannelRipperDisabled => Resource.GetString("ChannelRipperDisabled");
+
+        /// <summary>
+        /// Localized resource similar to "Enabled"
+        /// </summary>
+        public static string ChannelRipperEnabled => Resource.GetString("ChannelRipperEnabled");
+
+        /// <summary>
+        /// Localized resource similar to "Using TDLib DownloadFile pipeline (same as auto-download path)."
+        /// </summary>
+        public static string ChannelRipperInfoText => Resource.GetString("ChannelRipperInfoText");
+
+        /// <summary>
+        /// Localized resource similar to "Reset download history"
+        /// </summary>
+        public static string ChannelRipperResetTarget => Resource.GetString("ChannelRipperResetTarget");
+
+        /// <summary>
+        /// Localized resource similar to "Start / Pause"
+        /// </summary>
+        public static string ChannelRipperStartPause => Resource.GetString("ChannelRipperStartPause");
+
+        /// <summary>
+        /// Localized resource similar to "Start Ripping"
+        /// </summary>
+        public static string ChannelRipperStartForChat => Resource.GetString("ChannelRipperStartForChat");
+
+        /// <summary>
+        /// Localized resource similar to "Channel ripper enabled for this chat."
+        /// </summary>
+        public static string ChannelRipperStartedToast => Resource.GetString("ChannelRipperStartedToast");
+
+        /// <summary>
+        /// Localized resource similar to "Stop Ripping"
+        /// </summary>
+        public static string ChannelRipperStopForChat => Resource.GetString("ChannelRipperStopForChat");
+
+        /// <summary>
+        /// Localized resource similar to "Channel ripper disabled for this chat."
+        /// </summary>
+        public static string ChannelRipperStoppedToast => Resource.GetString("ChannelRipperStoppedToast");
+
+        /// <summary>
+        /// Localized resource similar to "Channel Ripper"
+        /// </summary>
+        public static string ChannelRipperTitle => Resource.GetString("ChannelRipperTitle");
+
+        /// <summary>
+        /// Localized resource similar to "Topics: all media scopes"
+        /// </summary>
+        public static string ChannelRipperTopicsAll => Resource.GetString("ChannelRipperTopicsAll");
+
+        /// <summary>
+        /// Localized resource similar to "Topics: {0}"
+        /// </summary>
+        public static string ChannelRipperTopicsSelected => Resource.GetString("ChannelRipperTopicsSelected");
+
+        /// <summary>
+        /// Localized resource similar to "Select one or more forum topics, or leave everything unchecked to rip all topics."
+        /// </summary>
+        public static string ChannelRipperTopicPickerHint => Resource.GetString("ChannelRipperTopicPickerHint");
+
+        /// <summary>
+        /// Localized resource similar to "Forum topics"
+        /// </summary>
+        public static string ChannelRipperTopicPromptTitle => Resource.GetString("ChannelRipperTopicPromptTitle");
+
+        /// <summary>
         /// Localized resource similar to "last seen within a month"
         /// </summary>
         public static string WithinAMonth => Resource.GetString("WithinAMonth");

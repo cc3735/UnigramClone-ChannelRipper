@@ -43,7 +43,7 @@ namespace Telegram.Td
 
         [SuppressUnmanagedCodeSecurity]
         [DllImport("tdjson.dll", CallingConvention = CallingConvention.Cdecl)]
-        private static extern unsafe void td_send(int client_id, long request_id, byte* request);
+        private static extern unsafe void td_send(int client_id, byte* request);
 
         [SuppressUnmanagedCodeSecurity]
         [DllImport("tdjson.dll", CallingConvention = CallingConvention.Cdecl)]
@@ -51,7 +51,7 @@ namespace Telegram.Td
 
         [SuppressUnmanagedCodeSecurity]
         [DllImport("tdjson.dll", CallingConvention = CallingConvention.Cdecl)]
-        private static extern unsafe byte* td_receive(double timeout, out int client_id, out long request_id);
+        private static extern unsafe byte* td_receive(double timeout);
 
         private static long _currentRequestId = 0;
         private static readonly ReaderWriterDictionary<long, Action<Object>> _handlers = new();
@@ -61,14 +61,17 @@ namespace Telegram.Td
 
         public Client(ClientResultHandler updateHandler)
         {
+            StartupTrace.Write("Td.Client.ctor begin");
             _clientId = td_create_client_id();
+            StartupTrace.Write($"Td.Client.ctor td_create_client_id complete clientId={_clientId}");
 
             if (updateHandler != null)
             {
                 _updateHandlers[_clientId] = updateHandler;
+                StartupTrace.Write("Td.Client.ctor update handler registered");
             }
 
-            Send(new GetOption("version"));
+            StartupTrace.Write("Td.Client.ctor skipping eager GetOption(version)");
         }
 
         public unsafe void Send(Function function, Action<Object>? handler = null)
@@ -88,10 +91,10 @@ namespace Telegram.Td
                 _writer.Rent();
             }
 
-            var request = ClientJson.ToJson(_writer, function);
+            var request = ClientJson.ToJson(_writer, function, requestId);
             fixed (byte* bytes = request)
             {
-                td_send(_clientId, requestId, bytes);
+                td_send(_clientId, bytes);
             }
 
             _writer.Reset();
@@ -192,7 +195,7 @@ namespace Telegram.Td
             clientId = 0;
             requestId = 0;
 
-            var ptr = td_receive(timeout, out clientId, out requestId);
+            var ptr = td_receive(timeout);
             if (ptr == null)
             {
                 return new Error(400, "Can't deserialize");
@@ -221,9 +224,64 @@ namespace Telegram.Td
             }
 
             var span = new ReadOnlySpan<byte>(_buffer, 0, length);
+            TryParseMetadata(span, out clientId, out requestId);
 
             _updateHandlers.TryGetValue(clientId, out ClientResultHandler handler);
             return ClientJson.FromJson(span, handler);
+        }
+
+        private static void TryParseMetadata(ReadOnlySpan<byte> json, out int clientId, out long requestId)
+        {
+            clientId = 0;
+            requestId = 0;
+
+            var reader = new Utf8JsonReader(json);
+            if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject)
+            {
+                return;
+            }
+
+            while (reader.Read())
+            {
+                if (reader.TokenType == JsonTokenType.EndObject)
+                {
+                    break;
+                }
+
+                if (reader.TokenType != JsonTokenType.PropertyName)
+                {
+                    continue;
+                }
+
+                bool isClientId = reader.ValueTextEquals("@client_id"u8);
+                bool isExtra = reader.ValueTextEquals("@extra"u8);
+
+                if (!reader.Read())
+                {
+                    break;
+                }
+
+                if (isClientId && reader.TokenType == JsonTokenType.Number)
+                {
+                    reader.TryGetInt32(out clientId);
+                }
+                else if (isExtra)
+                {
+                    if (reader.TokenType == JsonTokenType.Number)
+                    {
+                        reader.TryGetInt64(out requestId);
+                    }
+                    else if (reader.TokenType == JsonTokenType.String)
+                    {
+                        long.TryParse(reader.GetString(), out requestId);
+                    }
+                }
+
+                if (reader.TokenType == JsonTokenType.StartObject || reader.TokenType == JsonTokenType.StartArray)
+                {
+                    reader.Skip();
+                }
+            }
         }
 
         private static readonly object _logMutex = new();

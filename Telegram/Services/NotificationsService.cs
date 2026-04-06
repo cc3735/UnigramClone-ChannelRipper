@@ -57,23 +57,30 @@ namespace Telegram.Services
 
         public NotificationsService(IClientService clientService, ISettingsService settingsService, ISession sessionService, IEventAggregator aggregator)
         {
+            StartupTrace.Write("NotificationsService.ctor begin");
             _clientService = clientService;
             _settings = settingsService;
             _sessionService = sessionService;
             _aggregator = aggregator;
+            StartupTrace.Write("NotificationsService.ctor fields assigned");
 
             _unreadCount = new DebouncedProperty<int>(200, UpdateUnreadCount, useBackgroundThread: true);
+            StartupTrace.Write("NotificationsService.ctor unread counter created");
 
             Subscribe();
+            StartupTrace.Write("NotificationsService.ctor subscribed to updates");
 
             var unreadCount = _clientService.GetUnreadCount(new ChatListMain());
             Handle(unreadCount.UnreadChatCount);
             Handle(unreadCount.UnreadMessageCount);
+            StartupTrace.Write("NotificationsService.ctor startup initialization complete");
         }
 
         static NotificationsService()
         {
+            StartupTrace.Write("NotificationsService.cctor begin");
             RemoveCollections();
+            StartupTrace.Write("NotificationsService.cctor toast cleanup scheduled");
         }
 
         private static async void RemoveCollections()

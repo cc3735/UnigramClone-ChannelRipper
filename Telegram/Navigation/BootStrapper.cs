@@ -51,12 +51,14 @@ namespace Telegram.Navigation
 
         public BootStrapper()
         {
+            StartupTrace.Write("BootStrapper.ctor begin");
             Current = this;
             Resuming += OnResuming;
             Suspending += OnSuspending;
 
             UISettings.TextScaleFactorChanged += OnTextScaleFactorChanged;
             TextScaleFactor = UISettings.TextScaleFactor;
+            StartupTrace.Write($"BootStrapper.ctor lifecycle hooks registered textScale={TextScaleFactor}");
         }
 
         private void OnTextScaleFactorChanged(UISettings sender, object args)
@@ -72,6 +74,7 @@ namespace Telegram.Navigation
         protected override void OnWindowCreated(WindowCreatedEventArgs args)
         {
             Logger.Info();
+            StartupTrace.Write("BootStrapper.OnWindowCreated begin");
 
             IsMainWindowCreated = true;
             //should be called to initialize and set new SynchronizationContext
@@ -88,6 +91,7 @@ namespace Telegram.Navigation
 
             args.Window.Activated += OnActivated;
             args.Window.Closed += OnClosed;
+            StartupTrace.Write("BootStrapper.OnWindowCreated complete");
             base.OnWindowCreated(args);
         }
 
@@ -158,6 +162,7 @@ namespace Telegram.Navigation
         protected sealed override void OnActivated(IActivatedEventArgs e)
         {
             Logger.Info();
+            StartupTrace.Write($"BootStrapper.OnActivated {e?.Kind}");
             CallInternalActivated(e);
         }
 
@@ -238,6 +243,7 @@ namespace Telegram.Navigation
         protected sealed override void OnLaunched(LaunchActivatedEventArgs e)
         {
             Logger.Info(e.Kind);
+            StartupTrace.Write($"BootStrapper.OnLaunched kind={e?.Kind} previous={e?.PreviousExecutionState} prelaunch={e?.PrelaunchActivated}");
             WatchDog.Launch(e.PreviousExecutionState);
             CallInternalLaunchAsync(e);
         }
@@ -257,6 +263,7 @@ namespace Telegram.Navigation
         private void InternalLaunch(LaunchActivatedEventArgs e)
         {
             Logger.Info($"Previous: {e.PreviousExecutionState}");
+            StartupTrace.Write("BootStrapper.InternalLaunch begin");
 
             PrelaunchActivated = e.PrelaunchActivated;
 
@@ -264,10 +271,13 @@ namespace Telegram.Navigation
             {
                 try
                 {
+                    StartupTrace.Write("BootStrapper.InternalLaunch InitializeFrame begin");
                     InitializeFrame(e);
+                    StartupTrace.Write("BootStrapper.InternalLaunch InitializeFrame complete");
                 }
                 catch (Exception)
                 {
+                    StartupTrace.Write("BootStrapper.InternalLaunch InitializeFrame threw");
                     // nothing
                 }
             }
@@ -317,9 +327,11 @@ namespace Telegram.Navigation
             {
                 var kind = e.PreviousExecutionState == ApplicationExecutionState.Running ? StartKind.Activate : StartKind.Launch;
                 CallOnStart(e, true, kind);
+                StartupTrace.Write("BootStrapper.InternalLaunch CallOnStart complete");
             }
 
             CallActivateWindow(ActivateWindowSources.Launching);
+            StartupTrace.Write("BootStrapper.InternalLaunch CallActivateWindow complete");
         }
 
         private void BackHandler(object sender, BackRequestedEventArgs args)
@@ -634,12 +646,16 @@ namespace Telegram.Navigation
             */
 
             Logger.Info($"Kind: {e.Kind}");
+            StartupTrace.Write($"BootStrapper.InitializeFrame begin kind={e?.Kind}");
 
             CallOnInitialize(false, e);
+            StartupTrace.Write("BootStrapper.InitializeFrame CallOnInitialize complete");
 
             if (WindowContext.Current.Content == null)
             {
+                StartupTrace.Write("BootStrapper.InitializeFrame creating root element");
                 WindowContext.Current.Content = CreateRootElement(e, WindowContext.Current);
+                StartupTrace.Write("BootStrapper.InitializeFrame root element created");
             }
             else
             {
@@ -651,8 +667,10 @@ namespace Telegram.Navigation
 
         private void CallActivateWindow(ActivateWindowSources source)
         {
+            StartupTrace.Write($"BootStrapper.CallActivateWindow begin source={source}");
             Window.Current.Activate();
             CurrentState = States.Running;
+            StartupTrace.Write("BootStrapper.CallActivateWindow complete");
         }
 
         #region Workers
@@ -668,6 +686,7 @@ namespace Telegram.Navigation
         private void CallOnInitialize(bool canRepeat, IActivatedEventArgs e)
         {
             Logger.Info();
+            StartupTrace.Write($"BootStrapper.CallOnInitialize begin canRepeat={canRepeat} kind={e?.Kind}");
 
             if (!canRepeat && CurrentStateHistory.ContainsValue(States.BeforeInit))
             {
@@ -677,11 +696,13 @@ namespace Telegram.Navigation
             CurrentState = States.BeforeInit;
             OnInitialize(e);
             CurrentState = States.AfterInit;
+            StartupTrace.Write("BootStrapper.CallOnInitialize complete");
         }
 
         private void CallOnStart(IActivatedEventArgs args, bool canRepeat, StartKind startKind)
         {
             Logger.Info();
+            StartupTrace.Write($"BootStrapper.CallOnStart begin canRepeat={canRepeat} startKind={startKind} kind={args?.Kind}");
 
             if (!canRepeat && CurrentStateHistory.ContainsValue(States.BeforeStart))
             {
@@ -691,6 +712,7 @@ namespace Telegram.Navigation
             CurrentState = States.BeforeStart;
             OnStart(startKind, args);
             CurrentState = States.AfterStart;
+            StartupTrace.Write("BootStrapper.CallOnStart complete");
         }
 
         #endregion

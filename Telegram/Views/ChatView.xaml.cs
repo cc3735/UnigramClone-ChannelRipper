@@ -38,6 +38,7 @@ using Telegram.Td;
 using Telegram.Td.Api;
 using Telegram.ViewModels;
 using Telegram.ViewModels.Chats;
+using Telegram.Views.Popups;
 using Telegram.ViewModels.Delegates;
 using Telegram.ViewModels.Stories;
 using Telegram.Views.Business;
@@ -2399,6 +2400,109 @@ namespace Telegram.Views
 
         #region Context menu
 
+        private async void ToggleChannelRip(Chat chat)
+        {
+            var channelRip = ViewModel.Session.Resolve<IChannelRipService>();
+            if (channelRip == null)
+            {
+                return;
+            }
+
+            async Task<bool> EnsureChannelRipReadyAsync()
+            {
+                var status = channelRip.GetStatus();
+                if (string.IsNullOrWhiteSpace(status?.RootFolderPath))
+                {
+                    if (!await channelRip.PickRipRootFolderAsync())
+                    {
+                        return false;
+                    }
+                }
+
+                channelRip.Start();
+                return true;
+            }
+
+            var existing = channelRip.GetTargets().FirstOrDefault(x => x.ChatId == chat.Id);
+            var currentForumTopicId = ViewModel.ForumTopic?.Info?.ForumTopicId ?? 0;
+            var hasCurrentForumTopic = currentForumTopicId > 0;
+
+            if (hasCurrentForumTopic)
+            {
+                var selectedTopicIds = new[] { currentForumTopicId };
+
+                if (existing != null)
+                {
+                    var currentMediaKinds = existing.MediaKinds == 0 ? ChannelRipMediaKind.All : existing.MediaKinds;
+                    var sameTopicSelection = existing.SelectedTopicIds != null
+                        && existing.SelectedTopicIds.Count == 1
+                        && existing.SelectedTopicIds[0] == currentForumTopicId;
+
+                    if (existing.IsEnabled && sameTopicSelection)
+                    {
+                        channelRip.DisableTarget(chat.Id);
+                        ViewModel.ShowToast(Strings.ChannelRipperStoppedToast);
+                    }
+                    else
+                    {
+                        if (!await EnsureChannelRipReadyAsync())
+                        {
+                            return;
+                        }
+
+                        await channelRip.UpdateTargetOptionsAsync(chat.Id, selectedTopicIds, currentMediaKinds);
+                        channelRip.EnableTarget(chat.Id);
+                        ViewModel.ShowToast($"{Strings.ChannelRipperStartedToast} ({ViewModel.ForumTopic.Info.Name})");
+                    }
+
+                    return;
+                }
+
+                if (!await EnsureChannelRipReadyAsync())
+                {
+                    return;
+                }
+
+                if (await channelRip.AddTargetWithTopicsAsync(chat.Id, selectedTopicIds))
+                {
+                    ViewModel.ShowToast($"{Strings.ChannelRipperStartedToast} ({ViewModel.ForumTopic.Info.Name})");
+                }
+
+                return;
+            }
+
+            if (existing != null)
+            {
+                if (existing.IsEnabled)
+                {
+                    channelRip.DisableTarget(chat.Id);
+                    ViewModel.ShowToast(Strings.ChannelRipperStoppedToast);
+                }
+                else
+                {
+                    if (!await EnsureChannelRipReadyAsync())
+                    {
+                        return;
+                    }
+
+                    channelRip.EnableTarget(chat.Id);
+                    ViewModel.ShowToast(Strings.ChannelRipperStartedToast);
+                }
+
+                return;
+            }
+
+            if (!await EnsureChannelRipReadyAsync())
+            {
+                return;
+            }
+
+            if (await channelRip.AddTargetAsync(chat.Id))
+            {
+                ViewModel.ShowToast(Strings.ChannelRipperStartedToast);
+            }
+        }
+
         private void Menu_ContextRequested(object sender, RoutedEventArgs e)
         {
             var flyout = new MenuFlyout();
@@ -2422,6 +2526,20 @@ namespace Telegram.Views
             }
 
             flyout.CreateFlyoutItem(Search, Strings.Search, Icons.Search, VirtualKey.F);
+
+            var channelRip = ViewModel.Session.Resolve<IChannelRipService>();
+            if (channelRip != null && ViewModel.Type is DialogType.History or DialogType.Thread && chat.Type is ChatTypeSupergroup or ChatTypeBasicGroup)
+            {
+                var existing = channelRip.GetTargets().FirstOrDefault(x => x.ChatId == chat.Id);
+                flyout.CreateFlyoutItem(
+                    () => ToggleChannelRip(chat),
+                    ViewModel.ForumTopic != null
+                        ? existing?.IsEnabled == true && existing.SelectedTopicIds?.Count == 1 && existing.SelectedTopicIds[0] == ViewModel.ForumTopic.Info.ForumTopicId
+                            ? "Stop ripping this topic"
+                            : "Start ripping this topic"
+                        : existing?.IsEnabled == true ? Strings.ChannelRipperStopForChat : Strings.ChannelRipperStartForChat,
+                    existing?.IsEnabled == true ? Icons.Pause : Icons.Play);
+            }
 
             if (supergroup != null && !supergroup.IsBroadcastGroup && !supergroup.IsDirectMessagesGroup && ((ViewModel.IsPremium || (supergroupFull?.MyBoostCount > 0) || supergroup.Status is ChatMemberStatusCreator or ChatMemberStatusAdministrator)))
             {

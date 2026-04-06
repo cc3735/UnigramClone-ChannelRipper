@@ -81,25 +81,8 @@ namespace Telegram.Views.Popups
                 TextBlockHelper.SetMarkdown(Subtitle, Strings.BotAuthSiteSubtitle);
             }
 
-            if (string.IsNullOrEmpty(requestConfirmation.Platform) || string.IsNullOrEmpty(requestConfirmation.Browser))
-            {
-                Application.Visibility = Visibility.Collapsed;
-            }
-            else
-            {
-                Application.Title = requestConfirmation.Platform;
-                Application.Subtitle = requestConfirmation.Browser;
-            }
-
-            if (string.IsNullOrEmpty(requestConfirmation.Location) || string.IsNullOrEmpty(requestConfirmation.IpAddress))
-            {
-                Location.Visibility = Visibility.Collapsed;
-            }
-            else
-            {
-                Location.Title = requestConfirmation.Location;
-                Location.Subtitle = string.Format(Strings.BotAuthBasedOnIP, requestConfirmation.IpAddress);
-            }
+            Application.Visibility = Visibility.Collapsed;
+            Location.Visibility = Visibility.Collapsed;
 
             if (requestConfirmation.RequestWriteAccess)
             {
@@ -132,24 +115,9 @@ namespace Telegram.Views.Popups
 
         public bool AllowPhoneNumberAccess { get; private set; }
 
-        private async void ContentDialog_PrimaryButtonClick(ContentDialog sender, ContentDialogButtonClickEventArgs args)
+        private void ContentDialog_PrimaryButtonClick(ContentDialog sender, ContentDialogButtonClickEventArgs args)
         {
-            if (_requestConfirmation.RequestPhoneNumberAccess && !_requestedPhoneNumberAccess)
-            {
-                _requestedPhoneNumberAccess = true;
-                args.Cancel = true;
-
-                var user = _clientService.GetUser(_clientService.Options.MyId);
-                var phoneNumber = PhoneNumber.Format(user.PhoneNumber);
-
-                var confirm = await _navigationService.ShowPopupAsync(string.Format(Strings.BotAuthPhoneNumberText, _requestConfirmation.Domain, phoneNumber), Strings.BotAuthPhoneNumber, Strings.BotAuthPhoneNumberAccept, Strings.BotAuthPhoneNumberDeny);
-                if (confirm == ContentDialogResult.Primary)
-                {
-                    AllowPhoneNumberAccess = true;
-                }
-
-                Hide();
-            }
+            AllowPhoneNumberAccess = false;
         }
 
         private void Alias_Click(object sender, RoutedEventArgs e)

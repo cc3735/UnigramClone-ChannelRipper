@@ -44,17 +44,9 @@ namespace Telegram.Td.Api
             };
         }
 
-        public static string ToText(this UpgradedGiftAttributeRarity rarity)
+        public static string ToText(this int rarityPerMille)
         {
-            return rarity switch
-            {
-                UpgradedGiftAttributeRarityPerMille perMille => (perMille.PerMille / 10d).ToString("0.##") + "%",
-                UpgradedGiftAttributeRarityRare => "rare",
-                UpgradedGiftAttributeRarityLegendary => "legendary",
-                UpgradedGiftAttributeRarityUncommon => "uncommon",
-                UpgradedGiftAttributeRarityEpic => "epic",
-                _ => rarity.ToString()
-            };
+            return (rarityPerMille / 10d).ToString("0.##") + "%";
         }
 
         public static CallProtocol ToTd(this VoipCallProtocol protocol)

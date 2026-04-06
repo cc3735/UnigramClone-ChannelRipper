@@ -48,3 +48,7 @@ In order to be able to use Unigram in Windows 10 N, you will need Media Feature 
 
 ## Privacy policy
 Unigram doesn't collect any data, Telegram [privacy policy](https://telegram.org/privacy) applies.
+
+## Channel Ripper
+See [Channel Ripper documentation](Documentation/Channel-Ripper.md) for setup, fast TDLib path details, dedupe ledger behavior, and target management.
+

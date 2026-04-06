@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Telegram.Collections;
+using Telegram.Common;
 using Telegram.Controls;
 using Telegram.Navigation;
 using Telegram.Views.Host;
@@ -57,28 +58,42 @@ namespace Telegram.Services
 
         public LifetimeService()
         {
+            StartupTrace.Write("LifetimeService.ctor begin");
+
             _passcode = new PasscodeService(SettingsService.Current.PasscodeLock);
+            StartupTrace.Write("LifetimeService.ctor PasscodeService created");
             _playback = new PlaybackService(SettingsService.Current);
+            StartupTrace.Write("LifetimeService.ctor PlaybackService created");
             _shortcuts = new ShortcutsService();
+            StartupTrace.Write("LifetimeService.ctor ShortcutsService created");
             _proxy = new ProxyService(this);
+            StartupTrace.Write("LifetimeService.ctor ProxyService created");
             _voip = new VoipCoordinator();
+            StartupTrace.Write("LifetimeService.ctor VoipCoordinator created");
             _locale = LocaleService.Current;
+            StartupTrace.Write("LifetimeService.ctor LocaleService acquired");
 
             var sessions = GetSessionsToInitialize(out int nextId)
                 .OrderByDescending(s => s.IsActive)
                 .ThenByDescending(s => s.IsPrevious)
                 .ToList();
+            StartupTrace.Write($"LifetimeService.ctor sessions enumerated count={sessions.Count} nextId={nextId}");
 
             for (int i = 0; i < sessions.Count; i++)
             {
                 var available = sessions[i];
+                StartupTrace.Write($"LifetimeService.ctor building session id={available.Id} active={(i == 0)}");
                 var session = Build(available.Id, i == 0);
+                StartupTrace.Write($"LifetimeService.ctor built session id={available.Id}");
 
                 _activeItem ??= session;
             }
 
+            StartupTrace.Write("LifetimeService.ctor ensuring active session");
             _activeItem ??= Build(nextId, true);
+            StartupTrace.Write($"LifetimeService.ctor active session id={_activeItem?.Id}");
             _proxy.Migrate(_activeItem.Id);
+            StartupTrace.Write("LifetimeService.ctor ProxyService.Migrate complete");
         }
 
         public static void Initialize()

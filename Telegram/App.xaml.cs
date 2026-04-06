@@ -69,15 +69,38 @@ namespace Telegram
         /// </summary>
         public App()
         {
-            TypeCrosserGenerator.Generate();
+            StartupTrace.Write("App.ctor begin");
 
-            SettingsService.Current.Initialize();
-            GarbageCollectionMonitor.Initialize(GC.Collect, SettingsService.Current.Diagnostics.DisableXamlGcCollect, SettingsService.Current.Diagnostics.DisableMemoryPressure);
-            WatchDog.Initialize();
-            LifetimeService.Initialize();
+            try
+            {
+                TypeCrosserGenerator.Generate();
+                StartupTrace.Write("App.ctor TypeCrosserGenerator.Generate complete");
 
-            RequestedTheme = SettingsService.Current.Appearance.GetCalculatedApplicationTheme();
-            InitializeComponent();
+                SettingsService.Current.Initialize();
+                StartupTrace.Write("App.ctor SettingsService.Initialize complete");
+
+                GarbageCollectionMonitor.Initialize(GC.Collect, SettingsService.Current.Diagnostics.DisableXamlGcCollect, SettingsService.Current.Diagnostics.DisableMemoryPressure);
+                StartupTrace.Write("App.ctor GarbageCollectionMonitor.Initialize complete");
+
+                WatchDog.Initialize();
+                StartupTrace.Write("App.ctor WatchDog.Initialize complete");
+
+                LifetimeService.Initialize();
+                StartupTrace.Write("App.ctor LifetimeService.Initialize complete");
+
+                StartupTrace.Write("App.ctor preparing RequestedTheme");
+                RequestedTheme = SettingsService.Current.Appearance.GetCalculatedApplicationTheme();
+                StartupTrace.Write($"App.ctor RequestedTheme assigned {RequestedTheme}");
+
+                StartupTrace.Write("App.ctor preparing InitializeComponent");
+                InitializeComponent();
+                StartupTrace.Write("App.ctor InitializeComponent complete");
+            }
+            catch (Exception ex)
+            {
+                StartupTrace.Write("App.ctor failed", ex);
+                throw;
+            }
         }
 
         protected override void OnWindowActivated(Window window, bool active)
@@ -134,6 +157,8 @@ namespace Telegram
 
         public override void OnInitialize(IActivatedEventArgs args)
         {
+            StartupTrace.Write($"OnInitialize begin {args?.Kind}");
+
             //Locator.Configure();
             //UnigramContainer.Current.ResolveType<IGenerationService>();
 
@@ -142,15 +167,90 @@ namespace Telegram
                 LifetimeService.Current.Passcode.Lock(true);
                 InactivityHelper.Initialize(LifetimeService.Current.Passcode.AutolockTimeout);
             }
+
+            StartupTrace.Write("OnInitialize complete");
         }
 
         public override async void OnStart(StartKind startKind, IActivatedEventArgs args)
         {
+            StartupTrace.Write($"OnStart begin startKind={startKind} activationKind={args?.Kind}");
+
 #if DEBUG
             DebugSettings.EnableFrameRateCounter = false;
 #endif
 
-            if (startKind == StartKind.Activate)
+            try
+            {
+                if (startKind == StartKind.Activate)
+                {
+                    var sessionId = Toast.GetSession(args);
+                    StartupTrace.Write($"OnStart activation sessionId={sessionId?.ToString() ?? "null"}");
+
+                    if (sessionId != null)
+                    {
+                        if (LifetimeService.Current.ActiveItem.Id != sessionId && LifetimeService.Current.TryResolve(sessionId.Value, out ISession session))
+                        {
+                            LifetimeService.Current.ActiveItem = session;
+
+                            if (WindowContext.Current.Content is RootPage root)
+                            {
+                                root.Switch(LifetimeService.Current.ActiveItem);
+                            }
+                        }
+                    }
+                }
+
+                var activeSession = LifetimeService.Current.ActiveItem;
+                StartupTrace.Write($"OnStart activeSession={activeSession?.Id}");
+
+                var navigation = WindowContext.Current.NavigationServices.GetByFrameId($"{activeSession.Id}");
+                StartupTrace.Write("OnStart navigation resolved");
+
+                var update = activeSession.Resolve<ICloudUpdateService>();
+                StartupTrace.Write("OnStart ICloudUpdateService resolved");
+
+                var service = activeSession.Resolve<IClientService>();
+                StartupTrace.Write("OnStart IClientService resolved");
+
+                var state = await service.GetAuthorizationStateAsync();
+                StartupTrace.Write($"OnStart authorization state resolved: {state?.GetType().Name ?? "null"}");
+
+                if (args is not ShareTargetActivatedEventArgs share)
+                {
+                    WindowContext.Current.Activate(args, navigation, state);
+                    StartupTrace.Write("OnStart WindowContext.Activate complete");
+
+                    _ = Task.Run(() => OnStartSync(startKind, update));
+                    StartupTrace.Write("OnStart OnStartSync queued");
+
+                    if (startKind != StartKind.Launch && WindowContext.Current.IsInMainView)
+                    {
+                        var view = ApplicationView.GetForCurrentView();
+                        await ApplicationViewSwitcher.TryShowAsStandaloneAsync(view.Id);
+                        StartupTrace.Write("OnStart standalone switch complete");
+                        //view.TryResizeView(WindowContext.Current.Bounds.ToSize());
+                    }
+                }
+                else if (WindowContext.Current.Content is SharePage sharePage)
+                {
+                    sharePage.Activate(share, navigation, state);
+                    StartupTrace.Write("OnStart SharePage.Activate complete");
+                }
+
+                StartupTrace.Write("OnStart complete");
+            }
+            catch (Exception ex)
+            {
+                StartupTrace.Write("OnStart failed", ex);
+                throw;
+            }
+        }
+
+        public override UIElement CreateRootElement(IActivatedEventArgs args, WindowContext window)
+        {
+            StartupTrace.Write($"CreateRootElement(window) begin activationKind={args?.Kind}");
+
+            try
             {
                 var sessionId = Toast.GetSession(args);
                 if (sessionId != null)
@@ -158,68 +258,39 @@ namespace Telegram
                     if (LifetimeService.Current.ActiveItem.Id != sessionId && LifetimeService.Current.TryResolve(sessionId.Value, out ISession session))
                     {
                         LifetimeService.Current.ActiveItem = session;
-
-                        if (WindowContext.Current.Content is RootPage root)
-                        {
-                            root.Switch(LifetimeService.Current.ActiveItem);
-                        }
                     }
                 }
-            }
 
-            var activeSession = LifetimeService.Current.ActiveItem;
-            var navigation = WindowContext.Current.NavigationServices.GetByFrameId($"{activeSession.Id}");
+                var activeSession = LifetimeService.Current.ActiveItem;
+                StartupTrace.Write($"CreateRootElement(window) activeSession={activeSession?.Id}");
 
-            var update = activeSession.Resolve<ICloudUpdateService>();
-            var service = activeSession.Resolve<IClientService>();
+                var navigationService = NavigationServiceFactory(activeSession, window, BackButton.Ignore, $"{activeSession.Id}", true) as NavigationService;
+                StartupTrace.Write("CreateRootElement(window) navigation service created");
 
-            var state = await service.GetAuthorizationStateAsync();
-
-            if (args is not ShareTargetActivatedEventArgs share)
-            {
-                WindowContext.Current.Activate(args, navigation, state);
-
-                _ = Task.Run(() => OnStartSync(startKind, update));
-
-                if (startKind != StartKind.Launch && WindowContext.Current.IsInMainView)
+                if (args is ShareTargetActivatedEventArgs)
                 {
-                    var view = ApplicationView.GetForCurrentView();
-                    await ApplicationViewSwitcher.TryShowAsStandaloneAsync(view.Id);
-                    //view.TryResizeView(WindowContext.Current.Bounds.ToSize());
+                    var sharePage = new SharePage(window, activeSession)
+                    {
+                        FlowDirection = LocaleService.Current.FlowDirection
+                    };
+
+                    StartupTrace.Write("CreateRootElement(window) SharePage created");
+                    return sharePage;
                 }
-            }
-            else if (WindowContext.Current.Content is SharePage sharePage)
-            {
-                sharePage.Activate(share, navigation, state);
-            }
-        }
 
-        public override UIElement CreateRootElement(IActivatedEventArgs args, WindowContext window)
-        {
-            var sessionId = Toast.GetSession(args);
-            if (sessionId != null)
-            {
-                if (LifetimeService.Current.ActiveItem.Id != sessionId && LifetimeService.Current.TryResolve(sessionId.Value, out ISession session))
-                {
-                    LifetimeService.Current.ActiveItem = session;
-                }
-            }
-
-            var activeSession = LifetimeService.Current.ActiveItem;
-            var navigationService = NavigationServiceFactory(activeSession, window, BackButton.Ignore, $"{activeSession.Id}", true) as NavigationService;
-
-            if (args is ShareTargetActivatedEventArgs)
-            {
-                return new SharePage(window, activeSession)
+                var rootPage = new RootPage(window, navigationService)
                 {
                     FlowDirection = LocaleService.Current.FlowDirection
                 };
-            }
 
-            return new RootPage(window, navigationService)
+                StartupTrace.Write("CreateRootElement(window) RootPage created");
+                return rootPage;
+            }
+            catch (Exception ex)
             {
-                FlowDirection = LocaleService.Current.FlowDirection
-            };
+                StartupTrace.Write("CreateRootElement(window) failed", ex);
+                throw;
+            }
         }
 
         public override UIElement CreateRootElement(INavigationService navigationService)
@@ -462,6 +533,7 @@ namespace Telegram
                 ContactsPopup => session.Resolve<ContactsViewModel>(),
                 CallsPopup => session.Resolve<CallsViewModel>(),
                 DownloadsPopup => session.Resolve<DownloadsViewModel>(),
+                ChannelRipPopup => session.Resolve<ChannelRipViewModel>(),
                 SettingsUsernamePopup => session.Resolve<SettingsUsernameViewModel>(),
                 ChooseChatsPopup => session.Resolve<ChooseChatsViewModel>(),
                 ChooseSoundPopup => session.Resolve<ChooseSoundViewModel>(),

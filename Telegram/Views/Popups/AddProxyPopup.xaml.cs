@@ -119,7 +119,7 @@ namespace Telegram.Views.Popups
                 StatusInfo.Inlines.Clear();
                 StatusInfo.Text = Strings.ProxyBottomSheetChecking;
 
-                var response = await _clientService.SendAsync(new PingProxy(_proxy));
+                var response = await _clientService.SendAsync(new PingProxy(_proxy.Id));
                 if (response is Seconds seconds)
                 {
                     if (seconds.SecondsValue != 0)

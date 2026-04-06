@@ -20,6 +20,10 @@
 #include <d2d1effects.h>
 #include <dwrite_1.h>
 
+#ifndef ssize_t
+typedef SSIZE_T ssize_t;
+#endif
+
 #undef small
 
 // Disable debug string output on non-debug build

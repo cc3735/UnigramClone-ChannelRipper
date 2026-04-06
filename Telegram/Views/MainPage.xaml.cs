@@ -2994,6 +2994,11 @@ namespace Telegram.Views
             await ViewModel.NavigationService.ShowPopupAsync(new DownloadsPopup());
         }
 
+        private async void ChannelRipper_Click(object sender, RoutedEventArgs e)
+        {
+            await ViewModel.NavigationService.ShowPopupAsync(new ChannelRipPopup());
+        }
+
         private void Photo_Click(object sender, RoutedEventArgs e)
         {
             if (MasterDetail.CurrentState == MasterDetailState.Minimal && MasterDetail.NavigationService.CanGoBack)
@@ -3843,3 +3848,5 @@ namespace Telegram.Views
         }
     }
 }
+
+

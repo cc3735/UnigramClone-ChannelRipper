@@ -60,7 +60,7 @@ namespace Telegram.Views.Popups
             }
         }
 
-        public Proxy Proxy => new Proxy(Server, Port, Type);
+        public Proxy Proxy => new Proxy(0, Server, Port, 0, false, Type);
 
         private string Server => FieldServer.Text ?? string.Empty;
 

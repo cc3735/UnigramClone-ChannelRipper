@@ -136,7 +136,7 @@ namespace Telegram.Views.Stars.Popups
 
         private async void InitializeGiftsForResale()
         {
-            var response = await _clientService.SendAsync(new SearchGiftsForResale(_gift.Id, new GiftForResaleOrderPrice(), false, Array.Empty<UpgradedGiftAttributeId>(), string.Empty, 1));
+            var response = await _clientService.SendAsync(new SearchGiftsForResale(_gift.Id, new GiftForResaleOrderPrice(), Array.Empty<UpgradedGiftAttributeId>(), string.Empty, 1));
             if (response is GiftsForResale gifts && gifts.Gifts.Count > 0)
             {
                 _giftForResale = new AvailableGift(_gift, gifts.TotalCount, 0, gifts.Gifts[0].Gift.Title);

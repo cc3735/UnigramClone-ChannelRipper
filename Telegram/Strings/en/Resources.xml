@@ -13251,4 +13251,22 @@
     <string name="BotAuthSiteSubtitle">This site will receive your **name**,\n**username** and **profile photo**.</string>
     <string name="BotAuthTitle">Log in to **{0}**</string>
 
+
+    <string name="ChannelRipperTitle">Channel Ripper</string>
+    <string name="ChannelRipperInfoText">Using TDLib DownloadFile pipeline (same as auto-download path).</string>
+    <string name="ChannelRipperStartPause">Start / Pause</string>
+    <string name="ChannelRipperAddTarget">Add channel target</string>
+    <string name="ChannelRipperTopicPromptTitle">Forum topics</string>
+    <string name="ChannelRipperTopicPrompt">Enter forum topic IDs separated by commas.</string>
+    <string name="ChannelRipperTopicRequired">Select at least one forum topic ID.</string>
+    <string name="ChannelRipperTopicPickerHint">Select one or more forum topics, or leave everything unchecked to rip all topics.</string>
+    <string name="ChannelRipperTopicsSelected">Topics: {0}</string>
+    <string name="ChannelRipperTopicsAll">Topics: all media scopes</string>
+    <string name="ChannelRipperEnabled">Enabled</string>
+    <string name="ChannelRipperDisabled">Disabled</string>
+    <string name="ChannelRipperResetTarget">Reset download history</string>
+    <string name="ChannelRipperStartForChat">Start Ripping</string>
+    <string name="ChannelRipperStopForChat">Stop Ripping</string>
+    <string name="ChannelRipperStartedToast">Channel ripper enabled for this chat.</string>
+    <string name="ChannelRipperStoppedToast">Channel ripper disabled for this chat.</string>
 </resources>

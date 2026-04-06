@@ -443,7 +443,7 @@ namespace Telegram.Common
                     return;
                 }
 
-                var response = await clientService.SendAsync(new GetExternalLink(url, popup.AllowWriteAccess, popup.AllowPhoneNumberAccess));
+                var response = await clientService.SendAsync(new GetExternalLink(url, popup.AllowWriteAccess));
                 if (response is HttpUrl httpUrl)
                 {
                     OpenUrl(null, null, httpUrl.Url);
@@ -535,7 +535,7 @@ namespace Telegram.Common
                     NavigateToConfirmPhone(clientService, phoneNumberConfirmation.PhoneNumber, phoneNumberConfirmation.Hash);
                     break;
                 case InternalLinkTypeProxy proxy:
-                    NavigateToProxy(clientService, navigation, proxy.Proxy);
+                    NavigateToProxy(clientService, navigation, new Proxy(0, proxy.Server, proxy.Port, 0, false, proxy.Type));
                     break;
                 case InternalLinkTypePublicChat publicChat:
                     NavigateToUsername(clientService, navigation, publicChat.ChatUsername, draftText: publicChat.DraftText, openProfile: publicChat.OpenProfile);
@@ -1225,7 +1225,7 @@ namespace Telegram.Common
             var confirm = await navigation.ShowPopupAsync(new AddProxyPopup(clientService, navigation, proxy));
             if (confirm == ContentDialogResult.Primary)
             {
-                clientService.Send(new AddProxy(server ?? string.Empty, port, Constants.RELEASE, type));
+                clientService.Send(new AddProxy(proxy.Server ?? string.Empty, proxy.Port, Constants.RELEASE, proxy.Type));
             }
         }
 

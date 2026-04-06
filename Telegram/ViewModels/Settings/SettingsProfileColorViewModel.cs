@@ -94,7 +94,7 @@ namespace Telegram.ViewModels.Settings
             {
                 var totalCount = 0u;
 
-                var response = await _clientService.SendAsync(new SearchGiftsForResale(_gift.Gift.Id, new GiftForResaleOrderPrice(), false, Array.Empty<UpgradedGiftAttributeId>(), _nextOffset, 24));
+                var response = await _clientService.SendAsync(new SearchGiftsForResale(_gift.Gift.Id, new GiftForResaleOrderPrice(), Array.Empty<UpgradedGiftAttributeId>(), _nextOffset, 24));
                 if (response is GiftsForResale gifts)
                 {
                     foreach (var gift in gifts.Gifts)

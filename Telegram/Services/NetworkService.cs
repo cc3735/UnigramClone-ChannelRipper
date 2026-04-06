@@ -6,6 +6,7 @@
 //
 
 using Telegram.Td.Api;
+using Telegram.Common;
 using Windows.Networking.Connectivity;
 
 namespace Telegram.Services
@@ -26,36 +27,65 @@ namespace Telegram.Services
 
         public NetworkService(IClientService clientService, ISettingsService settingsService, IEventAggregator aggregator)
         {
+            StartupTrace.Write("NetworkService.ctor begin");
             _clientService = clientService;
             _settingsService = settingsService;
             _aggregator = aggregator;
+            StartupTrace.Write("NetworkService.ctor fields assigned");
 
             NetworkInformation.NetworkStatusChanged += OnNetworkStatusChanged;
+            StartupTrace.Write("NetworkService.ctor subscribed to NetworkStatusChanged");
 
             try
             {
                 Update(NetworkInformation.GetInternetConnectionProfile());
             }
-            catch { }
+            catch (System.Exception ex)
+            {
+                StartupTrace.Write("NetworkService.ctor startup probe failed", ex);
+            }
+
+            StartupTrace.Write("NetworkService.ctor complete");
         }
 
         public void Reconnect()
         {
-            _clientService.Send(new SetNetworkType(_type));
+            try
+            {
+                StartupTrace.Write($"NetworkService.Reconnect send type={_type?.GetType().Name}");
+                _clientService.Send(new SetNetworkType(_type));
+            }
+            catch (System.Exception ex)
+            {
+                StartupTrace.Write("NetworkService.Reconnect", ex);
+            }
         }
 
         private void OnNetworkStatusChanged(object sender)
         {
+            StartupTrace.Write("NetworkService.OnNetworkStatusChanged begin");
             try
             {
                 Update(NetworkInformation.GetInternetConnectionProfile());
             }
-            catch { }
+            catch (System.Exception ex)
+            {
+                StartupTrace.Write("NetworkService.OnNetworkStatusChanged", ex);
+            }
         }
 
         private void Update(ConnectionProfile profile)
         {
-            _clientService.Send(new SetNetworkType(_type = GetNetworkType(profile)));
+            try
+            {
+                _type = GetNetworkType(profile);
+                StartupTrace.Write($"NetworkService.Update send type={_type?.GetType().Name} metered={IsMetered}");
+                _clientService.Send(new SetNetworkType(_type));
+            }
+            catch (System.Exception ex)
+            {
+                StartupTrace.Write("NetworkService.Update", ex);
+            }
         }
 
         private NetworkType GetNetworkType(ConnectionProfile profile)

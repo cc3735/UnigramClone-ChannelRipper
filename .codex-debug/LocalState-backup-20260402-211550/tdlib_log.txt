@@ -1,0 +1,3 @@
+[ 3][t 0][1775178395.835923910][Client.cpp:280][&td_requests]	Begin to wait for updates with timeout 300.000000
+[ 3][t 0][1775178395.844024658][Client.cpp:482]	Created managed client 1
+[ 2][t 0][1775178395.886159181][Logging.cpp:160][&client]	[LifetimeService.cs:101][Initialize] 1

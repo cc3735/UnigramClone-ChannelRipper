@@ -1,0 +1,14 @@
+[ 3][t 0][1775163068.268666744][Client.cpp:280][&td_requests]	Begin to wait for updates with timeout 300.000000
+[ 3][t 0][1775163068.273101329][Client.cpp:482]	Created managed client 1
+[ 3][t 0][1775173748.423027515][Client.cpp:280][&td_requests]	Begin to wait for updates with timeout 300.000000
+[ 3][t 0][1775173748.435906410][Client.cpp:482]	Created managed client 1
+[ 3][t 0][1775174221.693257570][Client.cpp:280][&td_requests]	Begin to wait for updates with timeout 300.000000
+[ 3][t 0][1775174221.698119878][Client.cpp:482]	Created managed client 1
+[ 3][t 0][1775174563.019890785][Client.cpp:280][&td_requests]	Begin to wait for updates with timeout 300.000000
+[ 3][t 0][1775174563.022654294][Client.cpp:482]	Created managed client 1
+[ 3][t 0][1775174894.443860769][Client.cpp:280][&td_requests]	Begin to wait for updates with timeout 300.000000
+[ 3][t 0][1775174894.450527906][Client.cpp:482]	Created managed client 1
+[ 3][t 0][1775175251.936313152][Client.cpp:280][&td_requests]	Begin to wait for updates with timeout 300.000000
+[ 3][t 0][1775175251.941308498][Client.cpp:482]	Created managed client 1
+[ 3][t 0][1775175557.628230810][Client.cpp:280][&td_requests]	Begin to wait for updates with timeout 300.000000
+[ 3][t 0][1775175557.633641481][Client.cpp:482]	Created managed client 1

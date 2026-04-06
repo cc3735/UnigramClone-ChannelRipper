@@ -99,6 +99,27 @@ namespace Telegram.Td.Api
             return buffer.NullTerminated();
         }
 
+        public static ReadOnlySpan<byte> ToJson(ArrayPoolBufferWriter buffer, Function obj, long requestId)
+        {
+            if (_writer == null)
+            {
+                _writer = new Utf8JsonWriter(buffer, _options);
+                _buffer = new();
+            }
+            else
+            {
+                _writer.Reset(buffer);
+            }
+
+            _writer.WriteStartObject();
+            obj.ToJson(_writer);
+            _writer.WriteEndObject();
+            _writer.Flush();
+            _writer.Reset(_buffer);
+
+            return buffer.NullTerminated(requestId);
+        }
+
         public static Object FromJson(ReadOnlySpan<byte> jsonData, ClientResultHandler? handler = null)
         {
             var reader = new Utf8JsonReader(jsonData);

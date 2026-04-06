@@ -16241,4 +16241,55 @@ If you forget your password, you will lose access to your Telegram account. Ther
   <data name="ZoomOut" xml:space="preserve">
     <value>Zoom out</value>
   </data>
+  <data name="ChannelRipperTitle" xml:space="preserve">
+    <value>Channel Ripper</value>
+  </data>
+  <data name="ChannelRipperInfoText" xml:space="preserve">
+    <value>Using TDLib DownloadFile pipeline (same as auto-download path).</value>
+  </data>
+  <data name="ChannelRipperStartPause" xml:space="preserve">
+    <value>Start / Pause</value>
+  </data>
+  <data name="ChannelRipperAddTarget" xml:space="preserve">
+    <value>Add channel target</value>
+  </data>
+  <data name="ChannelRipperTopicPromptTitle" xml:space="preserve">
+    <value>Forum topics</value>
+  </data>
+  <data name="ChannelRipperTopicPrompt" xml:space="preserve">
+    <value>Enter forum topic IDs separated by commas.</value>
+  </data>
+  <data name="ChannelRipperTopicRequired" xml:space="preserve">
+    <value>Select at least one forum topic ID.</value>
+  </data>
+  <data name="ChannelRipperTopicPickerHint" xml:space="preserve">
+    <value>Select one or more forum topics, or leave everything unchecked to rip all topics.</value>
+  </data>
+  <data name="ChannelRipperTopicsSelected" xml:space="preserve">
+    <value>Topics: {0}</value>
+  </data>
+  <data name="ChannelRipperTopicsAll" xml:space="preserve">
+    <value>Topics: all media scopes</value>
+  </data>
+  <data name="ChannelRipperEnabled" xml:space="preserve">
+    <value>Enabled</value>
+  </data>
+  <data name="ChannelRipperDisabled" xml:space="preserve">
+    <value>Disabled</value>
+  </data>
+  <data name="ChannelRipperResetTarget" xml:space="preserve">
+    <value>Reset download history</value>
+  </data>
+  <data name="ChannelRipperStartForChat" xml:space="preserve">
+    <value>Start Ripping</value>
+  </data>
+  <data name="ChannelRipperStopForChat" xml:space="preserve">
+    <value>Stop Ripping</value>
+  </data>
+  <data name="ChannelRipperStartedToast" xml:space="preserve">
+    <value>Channel ripper enabled for this chat.</value>
+  </data>
+  <data name="ChannelRipperStoppedToast" xml:space="preserve">
+    <value>Channel ripper disabled for this chat.</value>
+  </data>
 </root>

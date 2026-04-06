@@ -897,6 +897,17 @@
                                                   Visibility="Collapsed"
                                                   Grid.Row="1" />
 
+                        <Button x:Name="ChannelRipperButton"
+                                Click="ChannelRipper_Click"
+                                Content="{CustomResource ChannelRipperTitle}"
+                                Style="{StaticResource StartButtonStyle}"
+                                Padding="12,3,12,5"
+                                Height="32"
+                                HorizontalAlignment="Left"
+                                VerticalAlignment="Bottom"
+                                Margin="12,0,0,12"
+                                Grid.Row="1" />
+
                         <Grid VerticalAlignment="Bottom"
                               HorizontalAlignment="Center"
                               Margin="12"
@@ -1040,3 +1051,5 @@
         <!--Completed="Confetti_Completed"-->
     </Grid>
 </controls:CorePage>
+
+

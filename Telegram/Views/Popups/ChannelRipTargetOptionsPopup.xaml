@@ -1,0 +1,64 @@
+<controls:ContentPopup x:Class="Telegram.Views.Popups.ChannelRipTargetOptionsPopup"
+                       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                       xmlns:controls="using:Telegram.Controls"
+                       mc:Ignorable="d"
+                       PrimaryButtonText="OK"
+                       SecondaryButtonText="Cancel"
+                       Padding="0,16,0,0"
+                       ContentMinWidth="520">
+
+    <ScrollViewer>
+        <StackPanel Spacing="12">
+            <StackPanel Margin="24,0,24,0" Spacing="8">
+                <TextBlock Text="Media types"
+                           Style="{StaticResource BaseTextBlockStyle}" />
+                <WrapGrid Orientation="Horizontal" MaximumRowsOrColumns="2">
+                    <CheckBox x:Name="VideosCheckBox" Content="Videos" Margin="0,0,16,8" />
+                    <CheckBox x:Name="PhotosCheckBox" Content="Photos" Margin="0,0,16,8" />
+                    <CheckBox x:Name="AnimationsCheckBox" Content="Animations" Margin="0,0,16,8" />
+                    <CheckBox x:Name="VideoNotesCheckBox" Content="Video notes" Margin="0,0,16,8" />
+                    <CheckBox x:Name="VideoDocumentsCheckBox" Content="Video documents" Margin="0,0,16,8" />
+                </WrapGrid>
+            </StackPanel>
+
+            <StackPanel x:Name="TopicsPanel" Margin="24,0,24,0" Spacing="8">
+                <TextBlock Text="Forum topics"
+                           Style="{StaticResource BaseTextBlockStyle}" />
+                <TextBlock x:Name="HintLabel"
+                           Style="{StaticResource InfoCaptionTextBlockStyle}"
+                           TextWrapping="WrapWholeWords" />
+
+                <ListView x:Name="TopicList"
+                          SelectionMode="Multiple"
+                          SelectionChanged="TopicList_SelectionChanged"
+                          ContainerContentChanging="TopicList_ContainerContentChanging"
+                          MinHeight="240">
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Text="{Binding Name}"
+                                           Style="{StaticResource BodyTextBlockStyle}"
+                                           TextWrapping="NoWrap"
+                                           TextTrimming="CharacterEllipsis" />
+
+                                <TextBlock Grid.Column="1"
+                                           Margin="12,0,0,0"
+                                           VerticalAlignment="Center"
+                                           Text="{Binding UnreadCount}"
+                                           Style="{StaticResource InfoCaptionTextBlockStyle}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</controls:ContentPopup>

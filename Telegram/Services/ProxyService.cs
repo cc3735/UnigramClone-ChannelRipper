@@ -71,10 +71,15 @@ namespace Telegram.Services
 
         public async void Migrate(int sessionId)
         {
+            StartupTrace.Write($"ProxyService.Migrate begin sessionId={sessionId}");
+
             if (_settings.MigratedProxy)
             {
+                StartupTrace.Write("ProxyService.Migrate already migrated");
+
                 if (_settings.EnabledProxyId == -1)
                 {
+                    StartupTrace.Write("ProxyService.Migrate re-enabling system proxy");
                     EnableSystemProxy();
                 }
 
@@ -82,6 +87,7 @@ namespace Telegram.Services
             }
 
             _settings.MigratedProxy = true;
+            StartupTrace.Write("ProxyService.Migrate marked migrated");
 
             var merged = new List<AddedProxy>();
             var enabled = default(AddedProxy);
@@ -91,7 +97,8 @@ namespace Telegram.Services
                 var systemProxyId = await client.SendAsync(new GetOption(OptionsService.R.SystemProxy)) as OptionValueInteger;
 
                 var response = await client.SendAsync(new GetProxies());
-                if (response is AddedProxies proxies)
+                var proxies = response as AddedProxies;
+                if (proxies != null)
                 {
                     foreach (var proxy in proxies.Proxies)
                     {
@@ -292,11 +299,11 @@ namespace Telegram.Services
                 var proxyId = await client.SendAsync(new GetOption(OptionsService.R.Proxy)) as OptionValueInteger;
                 if (proxyId != null)
                 {
-                    await client.SendAsync(new EditProxy((int)proxyId.Value, proxy.Proxy, true));
+                    await client.SendAsync(new EditProxy((int)proxyId.Value, proxy.Proxy.Server, proxy.Proxy.Port, true, proxy.Proxy.Type));
                 }
                 else
                 {
-                    var added = await client.SendAsync(new AddProxy(proxy.Proxy, true)) as AddedProxy;
+                    var added = await client.SendAsync(new AddProxy(proxy.Proxy.Server, proxy.Proxy.Port, true, proxy.Proxy.Type)) as Proxy;
                     if (added != null)
                     {
                         client.Options.Proxy = added.Id;
@@ -331,7 +338,7 @@ namespace Telegram.Services
                     port = 80;
                 }
 
-                EnableProxy(new AddedProxy(-1, 0, true, new Proxy(host, port, new ProxyTypeHttp())));
+                EnableProxy(new AddedProxy(-1, 0, true, new Proxy(0, host, port, 0, true, new ProxyTypeHttp())));
             }
             else
             {
@@ -475,7 +482,7 @@ namespace Telegram.Services
             // IsEnabled is determined by settings, not stored in DB
             bool isEnabled = _settings.EnabledProxyId == id;
 
-            return new AddedProxy(id, lastUsedDate, isEnabled, new Proxy(server, port, type));
+            return new AddedProxy(id, lastUsedDate, isEnabled, new Proxy(id, server, port, lastUsedDate, isEnabled, type));
         }
 
         private AddedProxies GetProxiesImpl()

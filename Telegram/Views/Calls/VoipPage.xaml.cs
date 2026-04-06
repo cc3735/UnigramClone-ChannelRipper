@@ -20,6 +20,7 @@ using Telegram.Services;
 using Telegram.Services.Calls;
 using Telegram.Td.Api;
 using Telegram.Views.Host;
+using VoipVideoOutputControl = Telegram.Services.Calls.VoipVideoOutput;
 using Windows.Foundation;
 using Windows.System.Display;
 using Windows.UI;
@@ -50,8 +51,8 @@ namespace Telegram.Views.Calls
 
         private readonly VoipCall _call;
 
-        private readonly VoipVideoOutput _localVideo;
-        private readonly VoipVideoOutput _remoteVideo;
+        private readonly VoipVideoOutputControl _localVideo;
+        private readonly VoipVideoOutputControl _remoteVideo;
 
         private VoipVideoActiveState _maximizedVideo;
         private VoipVideoActiveState _minimizedVideo;
@@ -90,8 +91,8 @@ namespace Telegram.Views.Calls
 
             _discardedTimer.Tick += Discarded_Tick;
 
-            _localVideo = new VoipVideoOutput(LocalVideo, true);
-            _remoteVideo = new VoipVideoOutput(RemoteVideo, false);
+            _localVideo = new VoipVideoOutputControl(LocalVideo, true);
+            _remoteVideo = new VoipVideoOutputControl(RemoteVideo, false);
 
             _localVideo.StateChanged += OnVideoStateChanged;
             _remoteVideo.StateChanged += OnVideoStateChanged;
@@ -244,7 +245,7 @@ namespace Telegram.Views.Calls
             this.BeginOnUIThread(() => OnMediaStateChanged(args));
         }
 
-        private void OnVideoStateChanged(VoipVideoOutput sender, VoipVideoStateChangedEventArgs args)
+        private void OnVideoStateChanged(VoipVideoOutputControl sender, VoipVideoStateChangedEventArgs args)
         {
             if (sender == _localVideo)
             {

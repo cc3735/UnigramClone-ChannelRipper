@@ -37,9 +37,11 @@ namespace Telegram.Services
         private Telegram.Services.ITranslateService _translateService;
         private Telegram.Services.IProfilePhotoService _profilePhotoService;
         private Telegram.Services.ITextRecognitionService _textRecognitionService;
+        private Telegram.Services.IChannelRipService _channelRipService;
 
         public SessionImpl(Telegram.Services.ILifetimeService lifetimeService, Telegram.Services.ILocaleService localeService, Telegram.Services.IPasscodeService passcodeService, Telegram.Services.IShortcutsService shortcutsService, Telegram.Services.IProxyService proxyService, int session, bool active)
         {
+            Telegram.Common.StartupTrace.Write($"SessionImpl.ctor begin session={session} active={active}");
             _id = session;
             _sessionService = this;
 
@@ -48,10 +50,14 @@ namespace Telegram.Services
             _passcodeService = passcodeService;
             _shortcutsService = shortcutsService;
             _proxyService = proxyService;
+            Telegram.Common.StartupTrace.Write("SessionImpl.ctor base services assigned");
 
             _deviceInfoService = new Telegram.Services.DeviceInfoService();
+            Telegram.Common.StartupTrace.Write("SessionImpl.ctor DeviceInfoService created");
             _settingsService = new Telegram.Services.SettingsService(_id);
+            Telegram.Common.StartupTrace.Write("SessionImpl.ctor SettingsService created");
             _eventAggregator = new Telegram.Services.EventAggregator();
+            Telegram.Common.StartupTrace.Write("SessionImpl.ctor EventAggregator created");
             _clientService = new Telegram.Services.ClientService(
                 _sessionService,
                 active,
@@ -59,28 +65,39 @@ namespace Telegram.Services
                 _settingsService,
                 _localeService,
                 _eventAggregator);
+            Telegram.Common.StartupTrace.Write("SessionImpl.ctor ClientService created");
             _contactsService = new Telegram.Services.ContactsService(
                 _clientService,
                 _settingsService,
                 _eventAggregator);
+            Telegram.Common.StartupTrace.Write("SessionImpl.ctor ContactsService created");
             _voipService = new Telegram.Services.VoipService(
                 _clientService,
                 _settingsService,
                 _eventAggregator);
+            Telegram.Common.StartupTrace.Write("SessionImpl.ctor VoipService created");
             _networkService = new Telegram.Services.NetworkService(
                 _clientService,
                 _settingsService,
                 _eventAggregator);
+            Telegram.Common.StartupTrace.Write("SessionImpl.ctor NetworkService created");
             _generationService = new Telegram.Services.GenerationService(
                 _clientService,
                 _eventAggregator);
+            Telegram.Common.StartupTrace.Write("SessionImpl.ctor GenerationService created");
             _notificationsService = new Telegram.Services.NotificationsService(
                 _clientService,
                 _settingsService,
                 _sessionService,
                 _eventAggregator);
+            Telegram.Common.StartupTrace.Write("SessionImpl.ctor NotificationsService created");
+            _channelRipService = new Telegram.Services.ChannelRipService(
+                _clientService,
+                _eventAggregator);
+            Telegram.Common.StartupTrace.Write("SessionImpl.ctor ChannelRipService created");
 
             Initialize(active);
+            Telegram.Common.StartupTrace.Write("SessionImpl.ctor Initialize complete");
         }
 
         public T Resolve<T>()
@@ -789,6 +806,12 @@ namespace Telegram.Services
                         _settingsService,
                         _storageService ??= new Telegram.Services.StorageService(_clientService),
                         _eventAggregator);
+                case "Telegram.ViewModels.ChannelRipViewModel":
+                    return (T)(object)new Telegram.ViewModels.ChannelRipViewModel(
+                        _clientService,
+                        _settingsService,
+                        _eventAggregator,
+                        _channelRipService ??= new Telegram.Services.ChannelRipService(_clientService, _eventAggregator));
                 case "Telegram.ViewModels.ChooseSoundViewModel":
                     return (T)(object)new Telegram.ViewModels.ChooseSoundViewModel(
                         _clientService,
@@ -920,6 +943,8 @@ namespace Telegram.Services
                     return (T)(_textRecognitionService ??= new Telegram.Services.TextRecognitionService(
                         _clientService,
                         _eventAggregator));
+                case "Telegram.Services.IChannelRipService":
+                    return (T)(_channelRipService ??= new Telegram.Services.ChannelRipService(_clientService, _eventAggregator));
                 default:
                     return default;
 
@@ -927,3 +952,5 @@ namespace Telegram.Services
         }
     }
 }
+
+
