@@ -6,6 +6,25 @@ The following tools and SDKs are mandatory for the project development:
     * Desktop development with C++
     * Universal Windows Platform deveopment
 	    * Windows 11 SDK (10.0.22621.0)
+
+## Current maintained build path for this fork
+
+For Channel Ripper work, the maintained path is currently the no-calls configuration.
+
+- Build the app with `EnableCalls=false`
+- Package the app as `msix`
+- Install the packaged app instead of launching `Telegram.exe` directly
+
+See also:
+
+- `Documentation/Channel-Ripper-Setup.md`
+- `Documentation/Channel-Ripper-Install.md`
+
+Helper script:
+
+```powershell
+.\Scripts\Build-ChannelRipper-Package.ps1
+```
  
 ## Getting started
 

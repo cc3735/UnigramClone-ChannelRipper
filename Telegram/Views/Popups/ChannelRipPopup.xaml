@@ -8,6 +8,9 @@
                        mc:Ignorable="d"
                        IsDismissButtonVisible="True"
                        ContentMinWidth="1180"
+                       ContentMaxWidth="1500"
+                       ContentMinHeight="860"
+                       ContentMaxHeight="980"
                        Padding="0,20,0,0">
 
     <Grid>
@@ -131,14 +134,14 @@
             <ListView x:Name="TargetsList"
                       ItemsSource="{x:Bind ViewModel.Items}"
                       SelectionMode="None"
-                      MinHeight="700">
+                      MinHeight="820">
                 <ListView.ItemTemplate>
                     <DataTemplate x:DataType="viewModels:ChannelRipTargetViewModel">
                         <Border Margin="0,8"
                                 Padding="0,0,0,8"
                                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                                 BorderThickness="0,0,0,1">
-                            <StackPanel Spacing="8">
+                            <StackPanel Spacing="6">
                                 <Grid ColumnSpacing="8">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
@@ -161,7 +164,7 @@
                                 </Grid>
 
                                 <StackPanel Visibility="{x:Bind TopicPanelVisibility, Mode=OneWay}"
-                                            Spacing="8">
+                                            Spacing="6">
                                     <Grid ColumnSpacing="8">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
@@ -182,23 +185,23 @@
                                                Style="{StaticResource InfoCaptionTextBlockStyle}"
                                                TextWrapping="WrapWholeWords" />
 
-                                    <Grid ColumnSpacing="24">
+                                    <Grid ColumnSpacing="16">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
 
-                                        <StackPanel Grid.Column="0" Spacing="6">
+                                        <StackPanel Grid.Column="0" Spacing="4">
                                             <TextBlock Text="Selected topics"
                                                        Visibility="{x:Bind HasVisibleSelectedTopics, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                        Style="{StaticResource InfoCaptionTextBlockStyle}" />
-                                            <ScrollViewer Height="280"
+                                            <ScrollViewer Height="360"
                                                           VerticalScrollBarVisibility="Auto"
                                                           Visibility="{x:Bind HasVisibleSelectedTopics, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
                                                 <ItemsControl ItemsSource="{x:Bind FilteredTopicItems, Mode=OneWay}">
                                                     <ItemsControl.ItemTemplate>
                                                         <DataTemplate x:DataType="viewModels:ChannelRipTopicItemViewModel">
-                                                            <Grid Margin="0,2,0,0" ColumnSpacing="8">
+                                                            <Grid Margin="0,1,0,0" ColumnSpacing="6">
                                                                 <Grid.ColumnDefinitions>
                                                                     <ColumnDefinition Width="*" />
                                                                     <ColumnDefinition Width="Auto" />
@@ -217,17 +220,17 @@
                                             </ScrollViewer>
                                         </StackPanel>
 
-                                        <StackPanel Grid.Column="1" Spacing="6">
+                                        <StackPanel Grid.Column="1" Spacing="4">
                                             <TextBlock Text="Available topics"
                                                        Visibility="{x:Bind HasVisibleAvailableTopics, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                        Style="{StaticResource InfoCaptionTextBlockStyle}" />
-                                            <ScrollViewer Height="280"
+                                            <ScrollViewer Height="360"
                                                           VerticalScrollBarVisibility="Auto"
                                                           Visibility="{x:Bind HasVisibleAvailableTopics, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}">
                                                 <ItemsControl ItemsSource="{x:Bind FilteredAvailableTopicItems, Mode=OneWay}">
                                                     <ItemsControl.ItemTemplate>
                                                         <DataTemplate x:DataType="viewModels:ChannelRipTopicItemViewModel">
-                                                            <Grid Margin="0,2,0,0" ColumnSpacing="8">
+                                                            <Grid Margin="0,1,0,0" ColumnSpacing="6">
                                                                 <Grid.ColumnDefinitions>
                                                                     <ColumnDefinition Width="*" />
                                                                     <ColumnDefinition Width="Auto" />
