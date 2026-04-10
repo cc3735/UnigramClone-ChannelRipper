@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd /c/Users/023du/OneDrive/Documents/GitHub/Unigram-Download-enhanced-full && git fetch origin)"
+    ]
+  }
+}

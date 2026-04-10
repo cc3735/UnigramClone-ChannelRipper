@@ -7,127 +7,146 @@
                        xmlns:viewModels="using:Telegram.ViewModels"
                        mc:Ignorable="d"
                        IsDismissButtonVisible="True"
-                       ContentMinWidth="1180"
-                       ContentMaxWidth="1500"
-                       ContentMinHeight="860"
-                       ContentMaxHeight="980"
+                       ContentMinWidth="760"
+                       ContentMaxWidth="1220"
+                       ContentMinHeight="620"
+                       ContentMaxHeight="860"
                        Padding="0,20,0,0">
 
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="360" />
+            <ColumnDefinition Width="320" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <StackPanel Grid.Column="0"
-                    Margin="24,0,0,16"
-                    Spacing="12">
-            <Grid ColumnSpacing="8" RowSpacing="8">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                </Grid.RowDefinitions>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
+        <ScrollViewer Grid.Column="0"
+                      Margin="24,0,0,16"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled"
+                      ZoomMode="Disabled">
+            <StackPanel Spacing="12">
+                <Grid ColumnSpacing="8" RowSpacing="8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
 
-                <Button Grid.Row="0"
-                        Grid.Column="0"
-                        Content="{CustomResource ChannelRipperStartPause}"
-                        Click="StartPause_Click" />
-                <Button Grid.Row="0"
-                        Grid.Column="1"
-                        Content="{CustomResource ChannelRipperAddTarget}"
-                        Click="AddTarget_Click" />
-                <Button Grid.Row="1"
-                        Grid.Column="0"
-                        Content="{CustomResource Folder}"
-                        Click="PickRoot_Click" />
-                <Button Grid.Row="1"
-                        Grid.Column="1"
-                        Content="Backup"
-                        Click="PickBackup_Click" />
-            </Grid>
+                    <Button Grid.Row="0"
+                            Grid.Column="0"
+                            Content="{CustomResource ChannelRipperStartPause}"
+                            Click="StartPause_Click" />
+                    <Button Grid.Row="0"
+                            Grid.Column="1"
+                            Content="{CustomResource ChannelRipperAddTarget}"
+                            Click="AddTarget_Click" />
+                    <Button Grid.Row="1"
+                            Grid.Column="0"
+                            Content="{CustomResource Folder}"
+                            Click="PickRoot_Click" />
+                    <Button Grid.Row="1"
+                            Grid.Column="1"
+                            Content="Backup"
+                            Click="PickBackup_Click" />
+                    <Button Grid.Row="2"
+                            Grid.ColumnSpan="2"
+                            Content="Retry all failed"
+                            Click="RetryAllFailed_Click" />
+                </Grid>
 
-            <TextBlock Text="{x:Bind ViewModel.Status, Mode=OneWay}"
-                       TextWrapping="WrapWholeWords" />
+                <TextBlock Text="{x:Bind ViewModel.Status, Mode=OneWay}"
+                           TextWrapping="WrapWholeWords" />
 
-            <TextBlock Text="{CustomResource ChannelRipperInfoText}"
-                       Style="{StaticResource InfoCaptionTextBlockStyle}" />
+                <TextBlock Text="{CustomResource ChannelRipperInfoText}"
+                           Style="{StaticResource InfoCaptionTextBlockStyle}" />
 
-            <TextBlock Text="{x:Bind ViewModel.RootPath, Mode=OneWay}"
-                       Style="{StaticResource InfoCaptionTextBlockStyle}" />
-            <TextBlock Text="{x:Bind ViewModel.BackupPath, Mode=OneWay}"
-                       Style="{StaticResource InfoCaptionTextBlockStyle}" />
+                <TextBlock Text="{x:Bind ViewModel.RootPath, Mode=OneWay}"
+                           Style="{StaticResource InfoCaptionTextBlockStyle}" />
+                <TextBlock Text="{x:Bind ViewModel.BackupPath, Mode=OneWay}"
+                           Style="{StaticResource InfoCaptionTextBlockStyle}" />
 
-            <ComboBox Header="Dedupe mode"
-                      ItemsSource="{x:Bind ViewModel.DedupeModes, Mode=OneWay}"
-                      SelectedItem="{x:Bind ViewModel.SelectedDedupeMode, Mode=OneWay}"
-                      DisplayMemberPath="Label"
-                      SelectionChanged="DedupeMode_SelectionChanged" />
-            <ComboBox Header="Output layout"
-                      ItemsSource="{x:Bind ViewModel.LayoutModes, Mode=OneWay}"
-                      SelectedItem="{x:Bind ViewModel.SelectedLayoutMode, Mode=OneWay}"
-                      DisplayMemberPath="Label"
-                      SelectionChanged="LayoutMode_SelectionChanged" />
-            <ComboBox Header="Sort targets"
-                      ItemsSource="{x:Bind ViewModel.SortModes, Mode=OneWay}"
-                      SelectedItem="{x:Bind ViewModel.SelectedSortMode, Mode=TwoWay}"
-                      DisplayMemberPath="Label" />
-            <CheckBox Content="Show active targets only"
-                      IsChecked="{x:Bind ViewModel.ShowActiveOnly, Mode=TwoWay}" />
+                <ComboBox Header="Dedupe mode"
+                          ItemsSource="{x:Bind ViewModel.DedupeModes, Mode=OneWay}"
+                          SelectedItem="{x:Bind ViewModel.SelectedDedupeMode, Mode=OneWay}"
+                          DisplayMemberPath="Label"
+                          SelectionChanged="DedupeMode_SelectionChanged" />
+                <ComboBox Header="Output layout"
+                          ItemsSource="{x:Bind ViewModel.LayoutModes, Mode=OneWay}"
+                          SelectedItem="{x:Bind ViewModel.SelectedLayoutMode, Mode=OneWay}"
+                          DisplayMemberPath="Label"
+                          SelectionChanged="LayoutMode_SelectionChanged" />
+                <ComboBox Header="Sort targets"
+                          ItemsSource="{x:Bind ViewModel.SortModes, Mode=OneWay}"
+                          SelectedItem="{x:Bind ViewModel.SelectedSortMode, Mode=TwoWay}"
+                          DisplayMemberPath="Label" />
+                <ComboBox Header="Periodic rescan"
+                          ItemsSource="{x:Bind ViewModel.RescanIntervals, Mode=OneWay}"
+                          SelectedItem="{x:Bind ViewModel.SelectedRescanInterval, Mode=TwoWay}"
+                          DisplayMemberPath="Label" />
+                <CheckBox Content="Show active targets only"
+                          IsChecked="{x:Bind ViewModel.ShowActiveOnly, Mode=TwoWay}" />
+                <CheckBox Content="Auto-start ripper on app launch"
+                          IsChecked="{x:Bind ViewModel.AutoStartOnLaunch, Mode=TwoWay}" />
+                <CheckBox Content="Write manifest index"
+                          IsChecked="{x:Bind ViewModel.ExportManifest, Mode=TwoWay}" />
+                <CheckBox Content="Write metadata sidecar files"
+                          IsChecked="{x:Bind ViewModel.ExportSidecarMetadata, Mode=TwoWay}" />
 
-            <TextBlock Text="{x:Bind ViewModel.LastError, Mode=OneWay}"
-                       Style="{StaticResource InfoCaptionTextBlockStyle}"
-                       Foreground="{ThemeResource SystemFillColorCriticalBrush}"
-                       TextWrapping="WrapWholeWords" />
+                <TextBlock Text="{x:Bind ViewModel.LastError, Mode=OneWay}"
+                           Style="{StaticResource InfoCaptionTextBlockStyle}"
+                           Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                           TextWrapping="WrapWholeWords" />
 
-            <Border x:Name="InlineEditPanel"
-                    Visibility="Collapsed"
-                    Padding="12"
-                    BorderThickness="1"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                    CornerRadius="8">
-                <StackPanel Spacing="10">
-                    <TextBlock x:Name="InlineEditTitle"
-                               Text="Edit target"
-                               Style="{StaticResource BaseTextBlockStyle}" />
-                    <TextBlock x:Name="InlineEditHint"
-                               Style="{StaticResource InfoCaptionTextBlockStyle}"
-                               TextWrapping="WrapWholeWords" />
-                    <TextBlock Text="Media types"
-                               Style="{StaticResource BaseTextBlockStyle}" />
-                    <WrapGrid Orientation="Horizontal" MaximumRowsOrColumns="2">
-                        <CheckBox x:Name="InlineVideosCheckBox" Content="Videos" Margin="0,0,16,8" />
-                        <CheckBox x:Name="InlinePhotosCheckBox" Content="Photos" Margin="0,0,16,8" />
-                        <CheckBox x:Name="InlineAnimationsCheckBox" Content="Animations" Margin="0,0,16,8" />
-                        <CheckBox x:Name="InlineVideoNotesCheckBox" Content="Video notes" Margin="0,0,16,8" />
-                        <CheckBox x:Name="InlineVideoDocumentsCheckBox" Content="Video documents" Margin="0,0,16,8" />
-                    </WrapGrid>
-                    <StackPanel x:Name="InlineTopicsPanel" Spacing="6">
-                        <TextBlock Text="Forum topics"
+                <Border x:Name="InlineEditPanel"
+                        Visibility="Collapsed"
+                        Padding="12"
+                        BorderThickness="1"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        CornerRadius="8">
+                    <StackPanel Spacing="10">
+                        <TextBlock x:Name="InlineEditTitle"
+                                   Text="Edit target"
                                    Style="{StaticResource BaseTextBlockStyle}" />
-                        <TextBlock Text="Known topics"
-                                   Style="{StaticResource InfoCaptionTextBlockStyle}" />
-                        <TextBox x:Name="InlineKnownTopicsTextBox"
-                                 AcceptsReturn="True"
-                                 IsReadOnly="True"
-                                 Height="180"
-                                 TextWrapping="Wrap"
-                                 VerticalAlignment="Top" />
-                        <TextBlock Text="Selected topic IDs (comma-separated, blank = all topics)"
-                                   Style="{StaticResource InfoCaptionTextBlockStyle}" />
-                        <TextBox x:Name="InlineSelectedTopicIdsTextBox"
-                                 PlaceholderText="Example: 12345, 67890" />
+                        <TextBlock x:Name="InlineEditHint"
+                                   Style="{StaticResource InfoCaptionTextBlockStyle}"
+                                   TextWrapping="WrapWholeWords" />
+                        <TextBlock Text="Media types"
+                                   Style="{StaticResource BaseTextBlockStyle}" />
+                        <WrapGrid Orientation="Horizontal" MaximumRowsOrColumns="2">
+                            <CheckBox x:Name="InlineVideosCheckBox" Content="Videos" Margin="0,0,16,8" />
+                            <CheckBox x:Name="InlinePhotosCheckBox" Content="Photos" Margin="0,0,16,8" />
+                            <CheckBox x:Name="InlineAnimationsCheckBox" Content="Animations" Margin="0,0,16,8" />
+                            <CheckBox x:Name="InlineVideoNotesCheckBox" Content="Video notes" Margin="0,0,16,8" />
+                            <CheckBox x:Name="InlineVideoDocumentsCheckBox" Content="Video documents" Margin="0,0,16,8" />
+                        </WrapGrid>
+                        <StackPanel x:Name="InlineTopicsPanel" Spacing="6">
+                            <TextBlock Text="Forum topics"
+                                       Style="{StaticResource BaseTextBlockStyle}" />
+                            <TextBlock Text="Known topics"
+                                       Style="{StaticResource InfoCaptionTextBlockStyle}" />
+                            <TextBox x:Name="InlineKnownTopicsTextBox"
+                                     AcceptsReturn="True"
+                                     IsReadOnly="True"
+                                     Height="180"
+                                     TextWrapping="Wrap"
+                                     VerticalAlignment="Top" />
+                            <TextBlock Text="Selected topic IDs (comma-separated, blank = all topics)"
+                                       Style="{StaticResource InfoCaptionTextBlockStyle}" />
+                            <TextBox x:Name="InlineSelectedTopicIdsTextBox"
+                                     PlaceholderText="Example: 12345, 67890" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="Apply" Click="InlineEditApply_Click" />
+                            <Button Content="Cancel" Click="InlineEditCancel_Click" />
+                        </StackPanel>
                     </StackPanel>
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Button Content="Apply" Click="InlineEditApply_Click" />
-                        <Button Content="Cancel" Click="InlineEditCancel_Click" />
-                    </StackPanel>
-                </StackPanel>
-            </Border>
-        </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
 
         <Grid Grid.Column="1"
               Margin="24,0,24,16">
@@ -205,12 +224,16 @@
                                                                 <Grid.ColumnDefinitions>
                                                                     <ColumnDefinition Width="*" />
                                                                     <ColumnDefinition Width="Auto" />
+                                                                    <ColumnDefinition Width="Auto" />
                                                                 </Grid.ColumnDefinitions>
                                                                 <TextBlock Grid.Column="0"
                                                                            Text="{x:Bind Label, Mode=OneWay}"
                                                                            Style="{StaticResource InfoCaptionTextBlockStyle}"
                                                                            VerticalAlignment="Center" />
                                                                 <Button Grid.Column="1"
+                                                                        Content="{x:Bind PauseButtonText, Mode=OneWay}"
+                                                                        Click="ToggleTopicPause_Click" />
+                                                                <Button Grid.Column="2"
                                                                         Content="Remove topic"
                                                                         Click="RemoveTopic_Click" />
                                                             </Grid>
@@ -263,14 +286,40 @@
                                            Style="{StaticResource InfoCaptionTextBlockStyle}"
                                            Foreground="{ThemeResource SystemFillColorCriticalBrush}"
                                            TextWrapping="WrapWholeWords" />
+                                <StackPanel Visibility="{x:Bind HasFailures, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                            Spacing="4">
+                                    <TextBlock Text="Recent failures"
+                                               Style="{StaticResource InfoCaptionTextBlockStyle}" />
+                                    <ItemsControl ItemsSource="{x:Bind FailureItems, Mode=OneWay}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="viewModels:ChannelRipFailureItemViewModel">
+                                                <StackPanel Margin="0,0,0,4"
+                                                            Spacing="0">
+                                                    <TextBlock Text="{x:Bind Label, Mode=OneWay}"
+                                                               Style="{StaticResource InfoCaptionTextBlockStyle}" />
+                                                    <TextBlock Text="{x:Bind Error, Mode=OneWay}"
+                                                               Style="{StaticResource InfoCaptionTextBlockStyle}"
+                                                               Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                                               TextWrapping="WrapWholeWords" />
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <Button Content="{x:Bind State, Mode=OneWay}" Click="ToggleTarget_Click" />
+                                    <Button Content="Videos only" Click="VideosOnly_Click" />
+                                    <Button Content="All media" Click="AllMedia_Click" />
                                     <Button Content="{x:Bind EditButtonText, Mode=OneWay}"
                                             Click="EditTarget_Click"
                                             IsEnabled="{x:Bind CanEditInPopup, Mode=OneWay}" />
                                     <Button Content="Open folder" Click="OpenTargetFolder_Click" />
+                                    <Button Content="Open manifest" Click="OpenTargetManifest_Click" />
                                 </StackPanel>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button Content="Retry failed"
+                                            Click="RetryFailed_Click"
+                                            Visibility="{x:Bind HasFailures, Mode=OneWay, Converter={StaticResource BooleanToVisibilityConverter}}" />
                                     <Button Content="{CustomResource Delete}" Click="RemoveTarget_Click" />
                                     <Button Content="{CustomResource ChannelRipperResetTarget}" Click="ResetTarget_Click" />
                                 </StackPanel>

@@ -63,6 +63,11 @@ namespace Telegram.Views.Popups
             await ViewModel.PickBackupAsync();
         }
 
+        private async void RetryAllFailed_Click(object sender, RoutedEventArgs e)
+        {
+            await ViewModel.RetryAllFailedAsync();
+        }
+
         private void DedupeMode_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if ((sender as ComboBox)?.SelectedItem is ChannelRipChoiceItem<ChannelRipDedupeMode> choice)
@@ -119,6 +124,21 @@ namespace Telegram.Views.Popups
             }
         }
 
+        private async void ToggleTopicPause_Click(object sender, RoutedEventArgs e)
+        {
+            if ((sender as FrameworkElement)?.DataContext is ChannelRipTopicItemViewModel topic)
+            {
+                if (topic.IsPaused)
+                {
+                    await ViewModel.ResumeTopicAsync(topic.Owner, topic.TopicId);
+                }
+                else
+                {
+                    await ViewModel.PauseTopicAsync(topic.Owner, topic.TopicId);
+                }
+            }
+        }
+
         private async void RefreshTopics_Click(object sender, RoutedEventArgs e)
         {
             if ((sender as FrameworkElement)?.DataContext is ChannelRipTargetViewModel target)
@@ -168,6 +188,38 @@ namespace Telegram.Views.Popups
             if ((sender as FrameworkElement)?.DataContext is ChannelRipTargetViewModel target)
             {
                 await ViewModel.OpenTargetFolderAsync(target);
+            }
+        }
+
+        private async void OpenTargetManifest_Click(object sender, RoutedEventArgs e)
+        {
+            if ((sender as FrameworkElement)?.DataContext is ChannelRipTargetViewModel target)
+            {
+                await ViewModel.OpenTargetManifestAsync(target);
+            }
+        }
+
+        private async void RetryFailed_Click(object sender, RoutedEventArgs e)
+        {
+            if ((sender as FrameworkElement)?.DataContext is ChannelRipTargetViewModel target)
+            {
+                await ViewModel.RetryFailedAsync(target);
+            }
+        }
+
+        private async void VideosOnly_Click(object sender, RoutedEventArgs e)
+        {
+            if ((sender as FrameworkElement)?.DataContext is ChannelRipTargetViewModel target)
+            {
+                await ViewModel.SetTargetVideosOnlyAsync(target);
+            }
+        }
+
+        private async void AllMedia_Click(object sender, RoutedEventArgs e)
+        {
+            if ((sender as FrameworkElement)?.DataContext is ChannelRipTargetViewModel target)
+            {
+                await ViewModel.SetTargetAllMediaAsync(target);
             }
         }
 

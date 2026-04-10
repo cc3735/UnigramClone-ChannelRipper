@@ -1,11 +1,12 @@
 [CmdletBinding()]
 param(
     [ValidateSet('Debug', 'Release')]
-    [string]$Configuration = 'Debug',
+    [string]$Configuration = 'Release',
     [ValidateSet('x64')]
     [string]$Platform = 'x64',
     [switch]$EnableCalls,
-    [switch]$StageForTransfer = $true
+    [switch]$StageForTransfer = $true,
+    [switch]$SignPackage
 )
 
 $ErrorActionPreference = 'Stop'
@@ -44,6 +45,32 @@ if (-not $latestPackageFolder) {
 
 Write-Host "Latest package folder: $($latestPackageFolder.FullName)"
 
+if ($SignPackage) {
+    $signtool = 'C:\Program Files (x86)\Windows Kits\10\bin\10.0.26100.0\x64\signtool.exe'
+    if (-not (Test-Path $signtool)) {
+        throw "signtool.exe not found at $signtool"
+    }
+
+    $certificate = Get-ChildItem -Path $latestPackageFolder.FullName -Filter *.pfx -File -ErrorAction SilentlyContinue |
+        Sort-Object LastWriteTime -Descending |
+        Select-Object -First 1
+
+    if (-not $certificate) {
+        Write-Warning "No .pfx found in $($latestPackageFolder.FullName). Skipping signing."
+    }
+    else {
+        $msix = Get-ChildItem -Path $latestPackageFolder.FullName -Filter *.msix -File -ErrorAction SilentlyContinue |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 1
+        if ($msix) {
+            & $signtool sign /fd SHA256 /f $certificate.FullName $msix.FullName
+            if ($LASTEXITCODE -ne 0) {
+                throw "Signing $($msix.FullName) failed."
+            }
+        }
+    }
+}
+
 if ($StageForTransfer) {
     $distRoot = Join-Path $repoRoot 'dist\ChannelRipper-Installer'
     if (Test-Path $distRoot) {
@@ -56,6 +83,22 @@ if ($StageForTransfer) {
     $wrapper = Join-Path $repoRoot 'Scripts\Install-ChannelRipper-Package.ps1'
     if (Test-Path $wrapper) {
         Copy-Item $wrapper (Join-Path $distRoot 'Install-ChannelRipper-Package.ps1') -Force
+    }
+
+    $docs = @(
+        'Documentation\Channel-Ripper.md',
+        'Documentation\Channel-Ripper-User-Guide.md',
+        'Documentation\Channel-Ripper-Setup.md',
+        'Documentation\Channel-Ripper-Install.md',
+        'Documentation\Channel-Ripper-Branding.md',
+        'migration.md'
+    )
+
+    foreach ($doc in $docs) {
+        $source = Join-Path $repoRoot $doc
+        if (Test-Path $source) {
+            Copy-Item $source (Join-Path $distRoot ([IO.Path]::GetFileName($source))) -Force
+        }
     }
 
     Write-Host "Staged transfer folder: $distRoot"

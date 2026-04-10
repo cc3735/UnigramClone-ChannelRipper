@@ -62,9 +62,16 @@ Package build:
 You can also use:
 
 ```powershell
-.\Scripts\Build-ChannelRipper-Package.ps1
+.\Scripts\Build-ChannelRipper-Package.ps1 -Configuration Release -StageForTransfer
 ```
 
 That script builds the app, builds the package, and stages a transfer folder under:
 
 `dist\ChannelRipper-Installer`
+
+The transfer folder includes:
+
+- the latest `msixbundle`
+- dependencies
+- the install wrapper script
+- the current Channel Ripper docs

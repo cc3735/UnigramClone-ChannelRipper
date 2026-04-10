@@ -31,14 +31,24 @@ namespace Telegram.Services
         Task<IReadOnlyList<ChannelRipTopicChoice>> RefreshTopicChoicesAsync(long chatId);
         Task<bool> UpdateTargetOptionsAsync(long chatId, IReadOnlyList<int> forumTopicIds, ChannelRipMediaKind mediaKinds);
         Task<bool> OpenTargetFolderAsync(long chatId);
+        Task<bool> OpenTargetManifestAsync(long chatId);
         void EnableTarget(long chatId);
         void DisableTarget(long chatId);
         void RemoveTarget(long chatId);
         void ResetTargetLedger(long chatId);
+        Task RetryFailedAsync(long chatId);
+        Task RetryAllFailedAsync();
+        Task<bool> SetTargetMediaKindsAsync(long chatId, ChannelRipMediaKind mediaKinds);
+        Task<bool> PauseTopicAsync(long chatId, int topicId);
+        Task<bool> ResumeTopicAsync(long chatId, int topicId);
         Task<bool> PickRipRootFolderAsync();
         Task<bool> PickLedgerBackupFolderAsync();
         void SetLayoutMode(ChannelRipLayoutMode mode);
         void SetDedupeMode(ChannelRipDedupeMode mode);
+        void SetAutoStartOnLaunch(bool value);
+        void SetExportManifest(bool value);
+        void SetExportSidecarMetadata(bool value);
+        void SetRescanIntervalMinutes(int minutes);
         void Start();
         void Pause();
         ChannelRipStatus GetStatus();
@@ -75,6 +85,7 @@ namespace Telegram.Services
         public string TitleSnapshot { get; set; }
         public bool IsEnabled { get; set; }
         public List<int> SelectedTopicIds { get; set; } = new();
+        public List<int> PausedTopicIds { get; set; } = new();
         public List<ChannelRipTopicChoice> KnownTopics { get; set; } = new();
         public ChannelRipMediaKind MediaKinds { get; set; } = ChannelRipMediaKind.All;
         public Dictionary<string, long> LastSeenMessageIdByScope { get; set; } = new();
@@ -87,6 +98,7 @@ namespace Telegram.Services
         public int DownloadedCount { get; set; }
         public int SkippedCount { get; set; }
         public int FailedCount { get; set; }
+        public List<ChannelRipFailureRecord> RecentFailures { get; set; } = new();
     }
 
     public sealed class ChannelRipStatus
@@ -103,6 +115,10 @@ namespace Telegram.Services
         public bool UseFlatLayout { get; set; }
         public ChannelRipLayoutMode LayoutMode { get; set; }
         public ChannelRipDedupeMode DedupeMode { get; set; }
+        public bool AutoStartOnLaunch { get; set; }
+        public bool ExportManifest { get; set; }
+        public bool ExportSidecarMetadata { get; set; }
+        public int RescanIntervalMinutes { get; set; }
         public IReadOnlyList<ChannelRipTarget> Targets { get; set; } = Array.Empty<ChannelRipTarget>();
     }
 
@@ -124,9 +140,25 @@ namespace Telegram.Services
         public long FirstSeenUnixTime { get; set; }
     }
 
+    public sealed class ChannelRipFailureRecord
+    {
+        public long ChatId { get; set; }
+        public long MessageId { get; set; }
+        public int? TopicId { get; set; }
+        public string ScopeKey { get; set; }
+        public string Error { get; set; }
+        public string Label { get; set; }
+        public long UnixTime { get; set; }
+        public int RetryAttempts { get; set; }
+    }
+
     internal sealed class ChannelRipSettings
     {
         public bool IsEnabled { get; set; }
+        public bool AutoStartOnLaunch { get; set; } = true;
+        public bool ExportManifest { get; set; } = true;
+        public bool ExportSidecarMetadata { get; set; }
+        public int RescanIntervalMinutes { get; set; } = 30;
         public int WorkerCount { get; set; } = 4;
         public int RetryCount { get; set; } = 5;
         public string RootFolderToken { get; set; }
@@ -145,6 +177,7 @@ namespace Telegram.Services
         public Message Message { get; init; }
         public int? TopicId { get; init; }
         public string ScopeKey { get; init; }
+        public bool IsRetry { get; init; }
     }
 
     public sealed class ChannelRipService : IChannelRipService
@@ -223,6 +256,8 @@ namespace Telegram.Services
                     existing.TitleSnapshot = string.IsNullOrWhiteSpace(title) ? existing.TitleSnapshot : title;
                     existing.IsEnabled = true;
                     existing.MediaKinds = existing.MediaKinds == 0 ? ChannelRipMediaKind.All : existing.MediaKinds;
+                    existing.PausedTopicIds ??= new List<int>();
+                    existing.RecentFailures ??= new List<ChannelRipFailureRecord>();
                     existing.LastBackfillUnixTime = 0;
                     existing.LastError = null;
                     changed = true;
@@ -235,6 +270,8 @@ namespace Telegram.Services
                         TitleSnapshot = string.IsNullOrWhiteSpace(title) ? chatId.ToString() : title,
                         IsEnabled = true,
                         MediaKinds = ChannelRipMediaKind.All,
+                        PausedTopicIds = new List<int>(),
+                        RecentFailures = new List<ChannelRipFailureRecord>(),
                         LastBackfillUnixTime = 0
                     });
                     changed = true;
@@ -268,8 +305,13 @@ namespace Telegram.Services
                 if (existing != null)
                 {
                     existing.SelectedTopicIds = forumTopicIds?.Distinct().ToList() ?? new List<int>();
+                    existing.PausedTopicIds = existing.PausedTopicIds?
+                        .Where(existing.SelectedTopicIds.Contains)
+                        .Distinct()
+                        .ToList() ?? new List<int>();
                     existing.IsEnabled = true;
                     existing.MediaKinds = existing.MediaKinds == 0 ? ChannelRipMediaKind.All : existing.MediaKinds;
+                    existing.RecentFailures ??= new List<ChannelRipFailureRecord>();
                     existing.LastBackfillUnixTime = 0;
                     existing.LastError = null;
                 }
@@ -281,7 +323,9 @@ namespace Telegram.Services
                         TitleSnapshot = string.IsNullOrWhiteSpace(title) ? chatId.ToString() : title,
                         IsEnabled = true,
                         SelectedTopicIds = forumTopicIds?.Distinct().ToList() ?? new List<int>(),
+                        PausedTopicIds = new List<int>(),
                         MediaKinds = ChannelRipMediaKind.All,
+                        RecentFailures = new List<ChannelRipFailureRecord>(),
                         LastBackfillUnixTime = 0
                     });
                 }
@@ -316,8 +360,13 @@ namespace Telegram.Services
                     if (chat != null && IsForumLike(chat))
                     {
                         existing.SelectedTopicIds = forumTopicIds?.Distinct().ToList() ?? new List<int>();
+                        existing.PausedTopicIds = existing.PausedTopicIds?
+                            .Where(existing.SelectedTopicIds.Contains)
+                            .Distinct()
+                            .ToList() ?? new List<int>();
                     }
 
+                    existing.RecentFailures ??= new List<ChannelRipFailureRecord>();
                     existing.LastError = null;
                     existing.LastBackfillUnixTime = 0;
                 }
@@ -477,6 +526,27 @@ namespace Telegram.Services
             return await Launcher.LaunchFolderAsync(folder);
         }
 
+        public async Task<bool> OpenTargetManifestAsync(long chatId)
+        {
+            await EnsureInitializedAsync();
+
+            var manifestPath = await ResolveTargetManifestPathAsync(chatId);
+            if (string.IsNullOrWhiteSpace(manifestPath) || !System.IO.File.Exists(manifestPath))
+            {
+                return false;
+            }
+
+            try
+            {
+                var file = await StorageFile.GetFileFromPathAsync(manifestPath);
+                return await Launcher.LaunchFileAsync(file);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         public void EnableTarget(long chatId)
         {
             lock (_syncLock)
@@ -538,11 +608,121 @@ namespace Telegram.Services
                     target.FailedCount = 0;
                     target.LastBackfillUnixTime = 0;
                     target.IsBackfillRunning = false;
+                    target.RecentFailures.Clear();
                 }
             }
 
             _ = PersistSettingsAsync();
             PublishStatus();
+        }
+
+        public async Task RetryFailedAsync(long chatId)
+        {
+            await EnsureInitializedAsync();
+
+            List<ChannelRipFailureRecord> failures;
+            lock (_syncLock)
+            {
+                failures = _settings.Targets.FirstOrDefault(x => x.ChatId == chatId)?.RecentFailures?
+                    .Select(CloneFailureRecord)
+                    .ToList() ?? new List<ChannelRipFailureRecord>();
+            }
+
+            foreach (var failure in failures)
+            {
+                await RetryFailureAsync(failure);
+            }
+
+            PublishStatus();
+        }
+
+        public async Task RetryAllFailedAsync()
+        {
+            await EnsureInitializedAsync();
+
+            List<ChannelRipFailureRecord> failures;
+            lock (_syncLock)
+            {
+                failures = _settings.Targets
+                    .SelectMany(x => x.RecentFailures ?? new List<ChannelRipFailureRecord>())
+                    .Select(CloneFailureRecord)
+                    .ToList();
+            }
+
+            foreach (var failure in failures)
+            {
+                await RetryFailureAsync(failure);
+            }
+
+            PublishStatus();
+        }
+
+        public async Task<bool> SetTargetMediaKindsAsync(long chatId, ChannelRipMediaKind mediaKinds)
+        {
+            await EnsureInitializedAsync();
+
+            List<int> topics = null;
+            lock (_syncLock)
+            {
+                topics = _settings.Targets.FirstOrDefault(x => x.ChatId == chatId)?.SelectedTopicIds?.ToList();
+            }
+
+            return await UpdateTargetOptionsAsync(chatId, topics, mediaKinds);
+        }
+
+        public async Task<bool> PauseTopicAsync(long chatId, int topicId)
+        {
+            await EnsureInitializedAsync();
+
+            var changed = false;
+            lock (_syncLock)
+            {
+                if (_settings.Targets.FirstOrDefault(x => x.ChatId == chatId) is { } target)
+                {
+                    target.PausedTopicIds ??= new List<int>();
+                    if (!target.PausedTopicIds.Contains(topicId))
+                    {
+                        target.PausedTopicIds.Add(topicId);
+                        target.LastBackfillUnixTime = 0;
+                        changed = true;
+                    }
+                }
+            }
+
+            if (changed)
+            {
+                await PersistSettingsAsync();
+                PublishStatus();
+            }
+
+            return changed;
+        }
+
+        public async Task<bool> ResumeTopicAsync(long chatId, int topicId)
+        {
+            await EnsureInitializedAsync();
+
+            var changed = false;
+            lock (_syncLock)
+            {
+                if (_settings.Targets.FirstOrDefault(x => x.ChatId == chatId) is { } target)
+                {
+                    target.PausedTopicIds ??= new List<int>();
+                    if (target.PausedTopicIds.Remove(topicId))
+                    {
+                        target.LastBackfillUnixTime = 0;
+                        changed = true;
+                    }
+                }
+            }
+
+            if (changed)
+            {
+                await PersistSettingsAsync();
+                PublishStatus();
+            }
+
+            return changed;
         }
 
         public async Task<bool> PickRipRootFolderAsync()
@@ -606,6 +786,16 @@ namespace Telegram.Services
             {
                 if (_status.IsRunning)
                 {
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(_settings.RootFolderToken) && string.IsNullOrWhiteSpace(_settings.RootFolderPath))
+                {
+                    _settings.IsEnabled = false;
+                    _status.IsRunning = false;
+                    _status.LastError = "Please choose a Channel Ripper folder before starting downloads.";
+                    PublishStatus();
+                    _ = PersistSettingsAsync();
                     return;
                 }
 
@@ -711,6 +901,50 @@ namespace Telegram.Services
             PublishStatus();
         }
 
+        public void SetAutoStartOnLaunch(bool value)
+        {
+            lock (_syncLock)
+            {
+                _settings.AutoStartOnLaunch = value;
+            }
+
+            _ = PersistSettingsAsync();
+            PublishStatus();
+        }
+
+        public void SetExportManifest(bool value)
+        {
+            lock (_syncLock)
+            {
+                _settings.ExportManifest = value;
+            }
+
+            _ = PersistSettingsAsync();
+            PublishStatus();
+        }
+
+        public void SetExportSidecarMetadata(bool value)
+        {
+            lock (_syncLock)
+            {
+                _settings.ExportSidecarMetadata = value;
+            }
+
+            _ = PersistSettingsAsync();
+            PublishStatus();
+        }
+
+        public void SetRescanIntervalMinutes(int minutes)
+        {
+            lock (_syncLock)
+            {
+                _settings.RescanIntervalMinutes = Math.Max(5, minutes);
+            }
+
+            _ = PersistSettingsAsync();
+            PublishStatus();
+        }
+
         public ChannelRipStatus GetStatus()
         {
             lock (_syncLock)
@@ -730,12 +964,22 @@ namespace Telegram.Services
                 await LoadSettingsAsync();
                 await LoadLedgerAsync();
 
-                if (_settings.IsEnabled)
+                if (_settings.AutoStartOnLaunch &&
+                    _settings.IsEnabled &&
+                    (!string.IsNullOrWhiteSpace(_settings.RootFolderToken) || !string.IsNullOrWhiteSpace(_settings.RootFolderPath)))
                 {
                     Start();
                 }
                 else
                 {
+                    if (_settings.IsEnabled &&
+                        string.IsNullOrWhiteSpace(_settings.RootFolderToken) &&
+                        string.IsNullOrWhiteSpace(_settings.RootFolderPath))
+                    {
+                        _settings.IsEnabled = false;
+                        _status.LastError = "Channel Ripper is configured but no archive folder is set. Pick a folder before starting it again.";
+                    }
+
                     PublishStatus();
                 }
             }
@@ -772,7 +1016,12 @@ namespace Telegram.Services
                     {
                         target.MediaKinds = ChannelRipMediaKind.All;
                     }
+
+                    target.PausedTopicIds ??= new List<int>();
+                    target.RecentFailures ??= new List<ChannelRipFailureRecord>();
                 }
+
+                _settings.RescanIntervalMinutes = Math.Max(5, _settings.RescanIntervalMinutes);
             }
             catch
             {
@@ -874,6 +1123,11 @@ namespace Telegram.Services
                 return;
             }
 
+            if (topicId.HasValue && (target.PausedTopicIds?.Contains(topicId.Value) ?? false))
+            {
+                return;
+            }
+
             if (!MatchesMediaFilter(update.Message, target.MediaKinds))
             {
                 return;
@@ -904,6 +1158,7 @@ namespace Telegram.Services
 
                 if (targets.Count == 0)
                 {
+                    MaybeSchedulePeriodicRescan();
                     await Task.Delay(TimeSpan.FromSeconds(5), token);
                     continue;
                 }
@@ -978,6 +1233,7 @@ namespace Telegram.Services
             if (target.SelectedTopicIds != null && target.SelectedTopicIds.Count > 0)
             {
                 return target.SelectedTopicIds
+                    .Where(topicId => !(target.PausedTopicIds?.Contains(topicId) ?? false))
                     .Distinct()
                     .Select(topicId => ((int?)topicId, topicId.ToString()))
                     .ToList();
@@ -1012,6 +1268,11 @@ namespace Telegram.Services
 
             foreach (var topic in topics)
             {
+                if (target.PausedTopicIds?.Contains(topic.Id) ?? false)
+                {
+                    continue;
+                }
+
                 scopes.Add((topic.Id, topic.Id.ToString()));
             }
 
@@ -1069,7 +1330,7 @@ namespace Telegram.Services
                         continue;
                     }
 
-                    await EnqueueAsync(chatId, message, topicId, scopeKey);
+                    await EnqueueAsync(chatId, message, topicId, scopeKey, false);
                 }
 
                 if (found.NextFromMessageId == 0)
@@ -1083,10 +1344,10 @@ namespace Telegram.Services
 
         private async Task EnqueueAsync(ChannelRipTarget target, Message message, int? topicId)
         {
-            await EnqueueAsync(target.ChatId, message, topicId, topicId?.ToString() ?? "all");
+            await EnqueueAsync(target.ChatId, message, topicId, topicId?.ToString() ?? "all", false);
         }
 
-        private async Task EnqueueAsync(long chatId, Message message, int? topicId, string scopeKey)
+        private async Task EnqueueAsync(long chatId, Message message, int? topicId, string scopeKey, bool isRetry)
         {
             if (_queue == null)
             {
@@ -1137,7 +1398,8 @@ namespace Telegram.Services
                 Target = runtime,
                 Message = message,
                 TopicId = topicId,
-                ScopeKey = scopeKey
+                ScopeKey = scopeKey,
+                IsRetry = isRetry
             });
 
             PublishStatus();
@@ -1175,18 +1437,14 @@ namespace Telegram.Services
                 {
                     await ProcessItemAsync(item, token);
                 }
+                catch (OperationCanceledException) when (token.IsCancellationRequested)
+                {
+                    // Pausing the ripper cancels in-flight workers. Treat that as a clean stop,
+                    // not as a failed archive item.
+                }
                 catch (Exception ex)
                 {
-                    lock (_syncLock)
-                    {
-                        _status.TotalFailed++;
-                        _status.LastError = ex.Message;
-                        if (_settings.Targets.FirstOrDefault(x => x.ChatId == item.Target.ChatId) is { } target)
-                        {
-                            target.FailedCount++;
-                            target.LastError = ex.Message;
-                        }
-                    }
+                    RegisterFailure(item, ex);
                 }
                 finally
                 {
@@ -1249,6 +1507,8 @@ namespace Telegram.Services
 
             for (int attempt = 1; attempt <= Math.Max(1, _settings.RetryCount); attempt++)
             {
+                token.ThrowIfCancellationRequested();
+
                 try
                 {
                     downloaded = await _clientService.DownloadFileAsync(file, 32);
@@ -1296,9 +1556,11 @@ namespace Telegram.Services
                     target.LastSeenMessageIdByScope[item.ScopeKey] = Math.Max(GetScopeCheckpoint(target.LastSeenMessageIdByScope, item.ScopeKey), item.Message.Id);
                     target.LastError = null;
                     target.DownloadedCount++;
+                    ClearFailure(target, item.Message.Id);
                 }
             }
 
+            await WriteManifestAsync(root, destinationFolder, item, destination, downloaded);
             await PersistLedgerAsync();
             await PersistSettingsAsync();
         }
@@ -1593,6 +1855,196 @@ namespace Telegram.Services
             return null;
         }
 
+        private void MaybeSchedulePeriodicRescan()
+        {
+            var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+            lock (_syncLock)
+            {
+                var intervalSeconds = Math.Max(5, _settings.RescanIntervalMinutes) * 60L;
+                foreach (var target in _settings.Targets.Where(x => x.IsEnabled && x.LastBackfillUnixTime > 0))
+                {
+                    if (now - target.LastBackfillUnixTime >= intervalSeconds)
+                    {
+                        target.LastBackfillUnixTime = 0;
+                    }
+                }
+            }
+        }
+
+        private void RegisterFailure(ChannelRipWorkItem item, Exception ex)
+        {
+            lock (_syncLock)
+            {
+                _status.TotalFailed++;
+                _status.LastError = ex.Message;
+                if (_settings.Targets.FirstOrDefault(x => x.ChatId == item.Target.ChatId) is { } target)
+                {
+                    target.FailedCount++;
+                    target.LastError = ex.Message;
+                    target.RecentFailures ??= new List<ChannelRipFailureRecord>();
+                    ClearFailure(target, item.Message.Id);
+                    target.RecentFailures.Insert(0, new ChannelRipFailureRecord
+                    {
+                        ChatId = item.Target.ChatId,
+                        MessageId = item.Message.Id,
+                        TopicId = item.TopicId,
+                        ScopeKey = item.ScopeKey,
+                        Error = ex.Message,
+                        Label = BuildFailureLabel(item.Message),
+                        UnixTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                        RetryAttempts = item.IsRetry ? 1 : 0
+                    });
+
+                    if (target.RecentFailures.Count > 25)
+                    {
+                        target.RecentFailures = target.RecentFailures.Take(25).ToList();
+                    }
+                }
+            }
+        }
+
+        private static void ClearFailure(ChannelRipTarget target, long messageId)
+        {
+            target.RecentFailures?.RemoveAll(x => x.MessageId == messageId);
+        }
+
+        private async Task RetryFailureAsync(ChannelRipFailureRecord failure)
+        {
+            if (failure == null)
+            {
+                return;
+            }
+
+            var response = await _clientService.SendAsync(new GetMessage(failure.ChatId, failure.MessageId));
+            if (response is not Message message)
+            {
+                return;
+            }
+
+            await EnqueueAsync(failure.ChatId, message, failure.TopicId, failure.ScopeKey ?? (failure.TopicId?.ToString() ?? "all"), true);
+        }
+
+        private async Task WriteManifestAsync(StorageFolder root, StorageFolder destinationFolder, ChannelRipWorkItem item, StorageFile destination, Telegram.Td.Api.File downloaded)
+        {
+            bool exportManifest;
+            bool exportSidecarMetadata;
+            lock (_syncLock)
+            {
+                exportManifest = _settings.ExportManifest;
+                exportSidecarMetadata = _settings.ExportSidecarMetadata;
+            }
+
+            if (!exportManifest && !exportSidecarMetadata)
+            {
+                return;
+            }
+
+            var manifest = new
+            {
+                chatId = item.Target.ChatId,
+                chatTitle = _clientService.GetTitle(item.Target.ChatId),
+                topicId = item.TopicId,
+                topicName = GetTopicName(item.Target.ChatId, item.TopicId),
+                messageId = item.Message.Id,
+                messageDateUnix = item.Message.Date,
+                messageDateIso = DateTimeOffset.FromUnixTimeSeconds(item.Message.Date).ToString("O"),
+                mediaKind = GetMediaKindLabel(item.Message),
+                fileId = downloaded?.Id ?? item.Message.GetFile()?.Id ?? 0,
+                uniqueId = downloaded?.Remote?.UniqueId ?? item.Message.GetFile()?.Remote?.UniqueId,
+                filePath = destination.Path,
+                dedupeMode = _settings.DedupeMode.ToString(),
+                caption = GetCaption(item.Message),
+                scopeKey = item.ScopeKey
+            };
+
+            if (exportManifest)
+            {
+                var manifestFile = await ResolveTargetManifestFileAsync(root, item.Target.ChatId);
+                if (manifestFile != null)
+                {
+                    await _storageLock.WaitAsync();
+                    try
+                    {
+                        await FileIO.AppendTextAsync(manifestFile, JsonSerializer.Serialize(manifest) + Environment.NewLine);
+                    }
+                    finally
+                    {
+                        _storageLock.Release();
+                    }
+                }
+            }
+
+            if (exportSidecarMetadata)
+            {
+                var json = JsonSerializer.Serialize(manifest, new JsonSerializerOptions { WriteIndented = true });
+                var sidecar = await destinationFolder.CreateFileAsync(destination.Name + ".metadata.json", CreationCollisionOption.ReplaceExisting);
+                await FileIO.WriteTextAsync(sidecar, json);
+            }
+        }
+
+        private async Task<string> ResolveTargetManifestPathAsync(long chatId)
+        {
+            var manifestFile = await ResolveTargetManifestFileAsync(null, chatId);
+            return manifestFile?.Path;
+        }
+
+        private async Task<StorageFile> ResolveTargetManifestFileAsync(StorageFolder root, long chatId)
+        {
+            root ??= await ResolveRootFolderAsync();
+            if (root == null)
+            {
+                return null;
+            }
+
+            var chatFolder = await root.CreateFolderAsync(Sanitize(_clientService.GetTitle(chatId), "UnknownChat"), CreationCollisionOption.OpenIfExists);
+            return await chatFolder.CreateFileAsync("channel-ripper-manifest.jsonl", CreationCollisionOption.OpenIfExists);
+        }
+
+        private string BuildFailureLabel(Message message)
+        {
+            var date = DateTimeOffset.FromUnixTimeSeconds(message.Date).ToString("yyyy-MM-dd HH:mm");
+            return $"{date} | {GetMediaKindLabel(message)} | message {message.Id}";
+        }
+
+        private string GetTopicName(long chatId, int? topicId)
+        {
+            if (!topicId.HasValue)
+            {
+                return "General";
+            }
+
+            return _clientService.TryGetForumTopic(chatId, topicId.Value, out var topic)
+                ? topic.Info.Name
+                : $"Topic-{topicId.Value}";
+        }
+
+        private static string GetCaption(Message message)
+        {
+            return message?.Content switch
+            {
+                MessagePhoto content => content.Caption?.Text,
+                MessageVideo content => content.Caption?.Text,
+                MessageAnimation content => content.Caption?.Text,
+                MessageVideoNote => string.Empty,
+                MessageDocument content => content.Caption?.Text,
+                _ => string.Empty
+            };
+        }
+
+        private static string GetMediaKindLabel(Message message)
+        {
+            return message?.Content switch
+            {
+                MessagePhoto => "photo",
+                MessageVideo => "video",
+                MessageAnimation => "animation",
+                MessageVideoNote => "video-note",
+                MessageDocument => "video-document",
+                _ => "file"
+            };
+        }
+
         private async Task PersistSettingsAsync()
         {
             await _storageLock.WaitAsync();
@@ -1673,6 +2125,10 @@ namespace Telegram.Services
                 _status.UseFlatLayout = _settings.LayoutMode == ChannelRipLayoutMode.ChannelOnly;
                 _status.LayoutMode = _settings.LayoutMode;
                 _status.DedupeMode = _settings.DedupeMode;
+                _status.AutoStartOnLaunch = _settings.AutoStartOnLaunch;
+                _status.ExportManifest = _settings.ExportManifest;
+                _status.ExportSidecarMetadata = _settings.ExportSidecarMetadata;
+                _status.RescanIntervalMinutes = _settings.RescanIntervalMinutes;
                 if (lastError != null)
                 {
                     _status.LastError = lastError;
@@ -1692,6 +2148,7 @@ namespace Telegram.Services
                 TitleSnapshot = target.TitleSnapshot,
                 IsEnabled = target.IsEnabled,
                 SelectedTopicIds = target.SelectedTopicIds?.ToList() ?? new List<int>(),
+                PausedTopicIds = target.PausedTopicIds?.ToList() ?? new List<int>(),
                 KnownTopics = target.KnownTopics?.Select(CloneTopicChoice).ToList() ?? new List<ChannelRipTopicChoice>(),
                 MediaKinds = target.MediaKinds,
                 LastSeenMessageIdByScope = target.LastSeenMessageIdByScope?.ToDictionary(x => x.Key, x => x.Value) ?? new Dictionary<string, long>(),
@@ -1703,7 +2160,8 @@ namespace Telegram.Services
                 ActiveCount = target.ActiveCount,
                 DownloadedCount = target.DownloadedCount,
                 SkippedCount = target.SkippedCount,
-                FailedCount = target.FailedCount
+                FailedCount = target.FailedCount,
+                RecentFailures = target.RecentFailures?.Select(CloneFailureRecord).ToList() ?? new List<ChannelRipFailureRecord>()
             };
         }
 
@@ -1738,7 +2196,31 @@ namespace Telegram.Services
                 UseFlatLayout = status.UseFlatLayout,
                 LayoutMode = status.LayoutMode,
                 DedupeMode = status.DedupeMode,
+                AutoStartOnLaunch = status.AutoStartOnLaunch,
+                ExportManifest = status.ExportManifest,
+                ExportSidecarMetadata = status.ExportSidecarMetadata,
+                RescanIntervalMinutes = status.RescanIntervalMinutes,
                 Targets = status.Targets?.Select(CloneTarget).ToList() ?? new List<ChannelRipTarget>()
+            };
+        }
+
+        private static ChannelRipFailureRecord CloneFailureRecord(ChannelRipFailureRecord failure)
+        {
+            if (failure == null)
+            {
+                return null;
+            }
+
+            return new ChannelRipFailureRecord
+            {
+                ChatId = failure.ChatId,
+                MessageId = failure.MessageId,
+                TopicId = failure.TopicId,
+                ScopeKey = failure.ScopeKey,
+                Error = failure.Error,
+                Label = failure.Label,
+                UnixTime = failure.UnixTime,
+                RetryAttempts = failure.RetryAttempts
             };
         }
 

@@ -26,6 +26,7 @@ namespace Telegram.ViewModels
         private readonly HashSet<long> _expandedTargetIds = new HashSet<long>();
         private readonly Dictionary<long, string> _topicFilters = new Dictionary<long, string>();
         private ChannelRipStatus _lastStatus;
+        private bool _suppressSettingWrites;
 
         public ChannelRipViewModel(IClientService clientService, ISettingsService settingsService, IEventAggregator aggregator, IChannelRipService channelRipService)
             : base(clientService, settingsService, aggregator)
@@ -51,6 +52,14 @@ namespace Telegram.ViewModels
                 new("Queue size", ChannelRipSortMode.QueueSize),
                 new("Recently updated", ChannelRipSortMode.RecentlyUpdated)
             };
+            RescanIntervals = new ObservableCollection<ChannelRipChoiceItem<int>>
+            {
+                new("Every 5 minutes", 5),
+                new("Every 15 minutes", 15),
+                new("Every 30 minutes", 30),
+                new("Every hour", 60),
+                new("Every 3 hours", 180)
+            };
             Refresh();
         }
 
@@ -58,6 +67,7 @@ namespace Telegram.ViewModels
         public ObservableCollection<ChannelRipChoiceItem<ChannelRipDedupeMode>> DedupeModes { get; }
         public ObservableCollection<ChannelRipChoiceItem<ChannelRipLayoutMode>> LayoutModes { get; }
         public ObservableCollection<ChannelRipChoiceItem<ChannelRipSortMode>> SortModes { get; }
+        public ObservableCollection<ChannelRipChoiceItem<int>> RescanIntervals { get; }
 
         private bool _isRunning;
         public bool IsRunning
@@ -135,6 +145,70 @@ namespace Telegram.ViewModels
             }
         }
 
+        private ChannelRipChoiceItem<int> _selectedRescanInterval;
+        public ChannelRipChoiceItem<int> SelectedRescanInterval
+        {
+            get => _selectedRescanInterval;
+            set
+            {
+                if (Set(ref _selectedRescanInterval, value) && value != null)
+                {
+                    if (!_suppressSettingWrites)
+                    {
+                        _channelRipService.SetRescanIntervalMinutes(value.Value);
+                    }
+                }
+            }
+        }
+
+        private bool _autoStartOnLaunch;
+        public bool AutoStartOnLaunch
+        {
+            get => _autoStartOnLaunch;
+            set
+            {
+                if (Set(ref _autoStartOnLaunch, value))
+                {
+                    if (!_suppressSettingWrites)
+                    {
+                        _channelRipService.SetAutoStartOnLaunch(value);
+                    }
+                }
+            }
+        }
+
+        private bool _exportManifest;
+        public bool ExportManifest
+        {
+            get => _exportManifest;
+            set
+            {
+                if (Set(ref _exportManifest, value))
+                {
+                    if (!_suppressSettingWrites)
+                    {
+                        _channelRipService.SetExportManifest(value);
+                    }
+                }
+            }
+        }
+
+        private bool _exportSidecarMetadata;
+        public bool ExportSidecarMetadata
+        {
+            get => _exportSidecarMetadata;
+            set
+            {
+                if (Set(ref _exportSidecarMetadata, value))
+                {
+                    if (!_suppressSettingWrites)
+                    {
+                        _channelRipService.SetExportSidecarMetadata(value);
+                    }
+                }
+            }
+        }
+
         public override void Subscribe()
         {
             Aggregator.Subscribe<UpdateChannelRipStatus>(this, Handle);
@@ -155,8 +229,6 @@ namespace Telegram.ViewModels
             {
                 _channelRipService.Start();
             }
-
-            Refresh();
         }
 
         public async Task PickRootAsync()
@@ -297,6 +369,18 @@ namespace Telegram.ViewModels
             Refresh();
         }
 
+        public async Task RetryFailedAsync(ChannelRipTargetViewModel target)
+        {
+            await _channelRipService.RetryFailedAsync(target.Target.ChatId);
+            Refresh();
+        }
+
+        public async Task RetryAllFailedAsync()
+        {
+            await _channelRipService.RetryAllFailedAsync();
+            Refresh();
+        }
+
         public async Task RemoveTopicAsync(ChannelRipTargetViewModel target, int topicId)
         {
             var remaining = (target.Target.SelectedTopicIds ?? new System.Collections.Generic.List<int>())
@@ -329,6 +413,30 @@ namespace Telegram.ViewModels
 
             var mediaKinds = target.Target.MediaKinds == 0 ? ChannelRipMediaKind.All : target.Target.MediaKinds;
             await _channelRipService.UpdateTargetOptionsAsync(target.Target.ChatId, updated, mediaKinds);
+            Refresh();
+        }
+
+        public async Task PauseTopicAsync(ChannelRipTargetViewModel target, int topicId)
+        {
+            await _channelRipService.PauseTopicAsync(target.Target.ChatId, topicId);
+            Refresh();
+        }
+
+        public async Task ResumeTopicAsync(ChannelRipTargetViewModel target, int topicId)
+        {
+            await _channelRipService.ResumeTopicAsync(target.Target.ChatId, topicId);
+            Refresh();
+        }
+
+        public async Task SetTargetVideosOnlyAsync(ChannelRipTargetViewModel target)
+        {
+            await _channelRipService.SetTargetMediaKindsAsync(target.Target.ChatId, ChannelRipMediaKind.Video | ChannelRipMediaKind.VideoDocument | ChannelRipMediaKind.VideoNote);
+            Refresh();
+        }
+
+        public async Task SetTargetAllMediaAsync(ChannelRipTargetViewModel target)
+        {
+            await _channelRipService.SetTargetMediaKindsAsync(target.Target.ChatId, ChannelRipMediaKind.All);
             Refresh();
         }
 
@@ -399,6 +507,11 @@ namespace Telegram.ViewModels
         public async Task OpenTargetFolderAsync(ChannelRipTargetViewModel target)
         {
             await _channelRipService.OpenTargetFolderAsync(target.Target.ChatId);
+        }
+
+        public async Task OpenTargetManifestAsync(ChannelRipTargetViewModel target)
+        {
+            await _channelRipService.OpenTargetManifestAsync(target.Target.ChatId);
         }
 
         public void SetLayoutMode(ChannelRipLayoutMode mode)
@@ -491,9 +604,22 @@ namespace Telegram.ViewModels
             RootPath = string.IsNullOrWhiteSpace(status.RootFolderPath) ? "Root: (not set)" : $"Root: {status.RootFolderPath}";
             BackupPath = string.IsNullOrWhiteSpace(status.LedgerBackupFolderPath) ? "Ledger backup: (not set)" : $"Ledger backup: {status.LedgerBackupFolderPath}";
             LastError = string.IsNullOrWhiteSpace(status.LastError) ? string.Empty : $"Last error: {status.LastError}";
-            SelectedDedupeMode = DedupeModes.FirstOrDefault(x => x.Value == status.DedupeMode) ?? DedupeModes.FirstOrDefault();
-            SelectedLayoutMode = LayoutModes.FirstOrDefault(x => x.Value == status.LayoutMode) ?? LayoutModes.FirstOrDefault();
-            SelectedSortMode ??= SortModes.FirstOrDefault();
+            _suppressSettingWrites = true;
+            try
+            {
+                AutoStartOnLaunch = status.AutoStartOnLaunch;
+                ExportManifest = status.ExportManifest;
+                ExportSidecarMetadata = status.ExportSidecarMetadata;
+                SelectedDedupeMode = DedupeModes.FirstOrDefault(x => x.Value == status.DedupeMode) ?? DedupeModes.FirstOrDefault();
+                SelectedLayoutMode = LayoutModes.FirstOrDefault(x => x.Value == status.LayoutMode) ?? LayoutModes.FirstOrDefault();
+                SelectedSortMode ??= SortModes.FirstOrDefault();
+                SelectedRescanInterval = RescanIntervals.FirstOrDefault(x => x.Value == status.RescanIntervalMinutes)
+                    ?? RescanIntervals.OrderBy(x => Math.Abs(x.Value - status.RescanIntervalMinutes)).FirstOrDefault();
+            }
+            finally
+            {
+                _suppressSettingWrites = false;
+            }
         }
 
         private bool IsForumLike(Chat chat)
@@ -707,6 +833,8 @@ namespace Telegram.ViewModels
         public string EditButtonText => CanEditInPopup ? "Edit" : "Edit in topic";
 
         public bool HasSelectedTopics => Target.SelectedTopicIds != null && Target.SelectedTopicIds.Count > 0;
+        public bool HasPausedTopics => Target.PausedTopicIds != null && Target.PausedTopicIds.Count > 0;
+        public bool HasFailures => Target.RecentFailures != null && Target.RecentFailures.Count > 0;
 
         public bool IsForumTarget
         {
@@ -725,7 +853,7 @@ namespace Telegram.ViewModels
             (Target.SelectedTopicIds ?? Enumerable.Empty<int>())
                 .Distinct()
                 .OrderBy(x => x)
-                .Select(x => new ChannelRipTopicItemViewModel(this, x, GetTopicName(x))));
+                .Select(x => new ChannelRipTopicItemViewModel(this, x, GetTopicName(x), (Target.PausedTopicIds ?? Enumerable.Empty<int>()).Contains(x))));
 
         public bool HasAvailableTopics => AvailableTopicItems.Count > 0;
 
@@ -733,7 +861,7 @@ namespace Telegram.ViewModels
             (Target.KnownTopics ?? Enumerable.Empty<ChannelRipTopicChoice>())
                 .Where(x => x != null && x.Id > 0 && !(Target.SelectedTopicIds ?? Enumerable.Empty<int>()).Contains(x.Id))
                 .OrderBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase)
-                .Select(x => new ChannelRipTopicItemViewModel(this, x.Id, x.Name)));
+                .Select(x => new ChannelRipTopicItemViewModel(this, x.Id, x.Name, false)));
 
         public ObservableCollection<ChannelRipTopicItemViewModel> FilteredTopicItems => new ObservableCollection<ChannelRipTopicItemViewModel>(
             TopicItems.Where(MatchesTopicFilter));
@@ -744,6 +872,11 @@ namespace Telegram.ViewModels
         public bool HasVisibleSelectedTopics => FilteredTopicItems.Count > 0;
 
         public bool HasVisibleAvailableTopics => FilteredAvailableTopicItems.Count > 0;
+        public ObservableCollection<ChannelRipFailureItemViewModel> FailureItems => new ObservableCollection<ChannelRipFailureItemViewModel>(
+            (Target.RecentFailures ?? Enumerable.Empty<ChannelRipFailureRecord>())
+                .OrderByDescending(x => x.UnixTime)
+                .Take(8)
+                .Select(x => new ChannelRipFailureItemViewModel(this, x)));
 
         public string TopicSummary
         {
@@ -765,9 +898,12 @@ namespace Telegram.ViewModels
                     return availableCount > 0 ? $"All topics enabled  |  {availableCount} cached topics" : "All topics enabled";
                 }
 
-                return selectedCount == 1
+                var pausedCount = (Target.PausedTopicIds ?? Enumerable.Empty<int>()).Distinct().Count();
+                var summary = selectedCount == 1
                     ? $"1 selected topic  |  {availableCount} more available"
                     : $"{selectedCount} selected topics  |  {availableCount} more available";
+
+                return pausedCount > 0 ? $"{summary}  |  {pausedCount} paused" : summary;
             }
         }
 
@@ -780,7 +916,7 @@ namespace Telegram.ViewModels
             : Windows.UI.Xaml.Visibility.Collapsed;
 
         public string TopicModeHint => HasSelectedTopics
-            ? "Selected topics"
+            ? HasPausedTopics ? "Selected topics. Paused topics stay configured but will not download until resumed." : "Selected topics"
             : "All topics enabled. Adding a topic here will switch this target to specific-topic mode.";
 
         public string TopicStatusHint
@@ -824,6 +960,8 @@ namespace Telegram.ViewModels
             RaisePropertyChanged(nameof(CanEditInPopup));
             RaisePropertyChanged(nameof(EditButtonText));
             RaisePropertyChanged(nameof(HasSelectedTopics));
+            RaisePropertyChanged(nameof(HasPausedTopics));
+            RaisePropertyChanged(nameof(HasFailures));
             RaisePropertyChanged(nameof(TopicItems));
             RaisePropertyChanged(nameof(FilteredTopicItems));
             RaisePropertyChanged(nameof(IsForumTarget));
@@ -832,6 +970,7 @@ namespace Telegram.ViewModels
             RaisePropertyChanged(nameof(HasVisibleAvailableTopics));
             RaisePropertyChanged(nameof(AvailableTopicItems));
             RaisePropertyChanged(nameof(FilteredAvailableTopicItems));
+            RaisePropertyChanged(nameof(FailureItems));
             RaisePropertyChanged(nameof(TopicModeHint));
             RaisePropertyChanged(nameof(TopicStatusHint));
             RaisePropertyChanged(nameof(TopicPanelVisibility));
@@ -883,17 +1022,34 @@ namespace Telegram.ViewModels
 
     public sealed class ChannelRipTopicItemViewModel
     {
-        public ChannelRipTopicItemViewModel(ChannelRipTargetViewModel owner, int topicId, string name)
+        public ChannelRipTopicItemViewModel(ChannelRipTargetViewModel owner, int topicId, string name, bool isPaused)
         {
             Owner = owner;
             TopicId = topicId;
             Name = name;
+            IsPaused = isPaused;
         }
 
         public ChannelRipTargetViewModel Owner { get; }
         public int TopicId { get; }
         public string Name { get; }
-        public string Label => $"{Name} ({TopicId})";
+        public bool IsPaused { get; }
+        public string PauseButtonText => IsPaused ? "Resume topic" : "Pause topic";
+        public string Label => IsPaused ? $"{Name} ({TopicId})  [paused]" : $"{Name} ({TopicId})";
+    }
+
+    public sealed class ChannelRipFailureItemViewModel
+    {
+        public ChannelRipFailureItemViewModel(ChannelRipTargetViewModel owner, ChannelRipFailureRecord record)
+        {
+            Owner = owner;
+            Record = record;
+        }
+
+        public ChannelRipTargetViewModel Owner { get; }
+        public ChannelRipFailureRecord Record { get; }
+        public string Label => $"{DateTimeOffset.FromUnixTimeSeconds(Record.UnixTime).ToLocalTime():g}  |  {Record.Label}";
+        public string Error => Record.Error;
     }
 }
 

@@ -1,10 +1,14 @@
 [CmdletBinding()]
 param(
-    [string]$PackageRoot = $PSScriptRoot,
+    [string]$PackageRoot,
     [string]$PackageName = '38833FF26BA1D.UnigramPreview'
 )
 
 $ErrorActionPreference = 'Stop'
+
+if (-not $PackageRoot) {
+    $PackageRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+}
 
 if (-not (Test-Path $PackageRoot)) {
     throw "PackageRoot does not exist: $PackageRoot"

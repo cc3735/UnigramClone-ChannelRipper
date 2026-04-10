@@ -15,7 +15,12 @@ It continuously downloads media from Telegram chats, channels, and forum topics 
 
 - forum topic targeting inside Channel Ripper
 - add/remove topics directly from the ripper UI
+- pause/resume selected topics directly from the ripper UI
 - topic filtering by name or ID
+- per-target media presets like `Videos only`
+- manifest export and optional sidecar metadata files
+- retry failed downloads per target or globally
+- unattended periodic rescans and auto-start on launch
 - output layout modes
 - dedupe modes
 - per-target queue/progress/status
