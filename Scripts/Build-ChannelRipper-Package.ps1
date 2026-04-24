@@ -11,6 +11,9 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# Ensure vswhere and gperf are on PATH for ILCompiler and TDLib builds
+$env:PATH = "C:\Program Files (x86)\Microsoft Visual Studio\Installer;C:\Users\023du\AppData\Local\Microsoft\WinGet\Packages\oss-winget.gperf_Microsoft.Winget.Source_8wekyb3d8bbwe;$env:PATH"
+
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $msbuild = 'C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe'
 

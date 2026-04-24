@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup>
+    <LogSDKReferenceResolutionErrorsAsWarnings>true</LogSDKReferenceResolutionErrorsAsWarnings>
+  </PropertyGroup>
+  <ItemGroup>
+    <SDKReference Remove="Microsoft.VCLibs.120, Version=14.0" />
+  </ItemGroup>
+</Project>

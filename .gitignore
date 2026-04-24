@@ -278,3 +278,6 @@ _Pvt_Extensions
 /Telegram2
 /Libraries/tdjson/td_api.tl
 /Libraries/tdjson/build-native
+
+# Packaging output from Scripts/Build-ChannelRipper-Package.ps1
+dist/
